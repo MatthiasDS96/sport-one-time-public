@@ -2,7 +2,7 @@ import { h, icon, pageHead, progress, segmented, tile } from '../ui.js';
 import * as store from '../store.js';
 import * as fs from '../nutrition/food-store.js';
 import { shoppingList } from '../nutrition/planner.js';
-import { STORES, storeCost, compareStores, euro } from '../nutrition/prices.js';
+import { STORES, storeCost, compareStores, euro, searchUrl } from '../nutrition/prices.js';
 import { mondayOf, addDays, shortDate, dayIndex, today } from '../dates.js';
 
 export function renderShopping(rerender, mondayParam) {
@@ -39,7 +39,8 @@ export function renderShopping(rerender, mondayParam) {
         h('span', { class: 'check' }, icon('check')),
         h('span', { class: 'shop-name' }, item.name, h('span', { class: 'shop-qty' }, item.qty, line?.packs > 1 && line.pack > 1 ? ` · ${line.packs} verpakkingen` : ''))),
       h('button', { class: `shop-price ${overrides[item.id]?.[shop] != null ? 'own' : ''}`, onclick: () => editPrice(item) },
-        line ? euro(line.cost) : `niet bij ${STORES[shop].label}`));
+        line ? euro(line.cost) : `niet bij ${STORES[shop].label}`),
+      h('a', { class: 'icon-btn small-btn', href: searchUrl(shop, item.name), target: '_blank', rel: 'noopener', 'aria-label': `Zoek bij ${STORES[shop].label}` }, icon('search')));
   };
   const group = (title, items, sub) => h('div', { class: 'card shop-group' }, h('h2', {}, title), sub ? h('div', { class: 'small muted' }, sub) : null, items.map(row));
 
@@ -52,7 +53,7 @@ export function renderShopping(rerender, mondayParam) {
         (k) => { store.update((st) => { st.food = { ...st.food, store: k }; }); rerender(); }),
       h('div', { class: 'stats-row shop-totals' }, ranking.map((r, i) => tile(euro(r.total),
         `${STORES[r.store].label}${i === 0 ? ' · goedkoopst' : ''}${r.missing.length ? ` · ${r.missing.length} niet` : ''}`))),
-      h('p', { class: 'small muted' }, 'Aan de kassa (volle verpakkingen, richtprijzen). Wat overblijft (rijst, havermout, ...) gebruik je volgende week verder. Tik op een prijs om je eigen prijs in te geven. Voorraadkast telt niet mee.')),
+      h('p', { class: 'small muted' }, 'Aan de kassa (volle verpakkingen, richtprijzen). Wat overblijft (rijst, havermout, ...) gebruik je volgende week verder. Tik op een prijs om je eigen prijs in te geven, op het vergrootglas om het product in de winkel op te zoeken. Voorraadkast telt niet mee.')),
     h('div', { class: 'card progress-card' },
       h('div', {}, h('b', {}, `${done} / ${all.length}`), h('span', { class: 'muted' }, ' in je kar')),
       progress(all.length ? done / all.length : 0)),

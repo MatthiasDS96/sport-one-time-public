@@ -3,9 +3,9 @@
 // De gebruiker kan per product en winkel een eigen prijs ingeven (state.prices).
 
 export const STORES = {
-  delhaize: { label: 'Delhaize', factor: 1 },
-  colruyt: { label: 'Colruyt', factor: 0.92 },
-  aldi: { label: 'Aldi', factor: 0.82 },
+  delhaize: { label: 'Delhaize', factor: 1, search: 'https://www.delhaize.be/nl/shop/search?q=' },
+  colruyt: { label: 'Colruyt', factor: 0.92, search: 'https://www.colruyt.be/nl/producten?searchTerm=' },
+  aldi: { label: 'Aldi', factor: 0.82, search: 'https://www.aldi.be/nl/zoekresultaten.html?query=' },
 };
 
 /** foodId → [verpakking (g, ml of stuks), prijs Delhaize in euro] */
@@ -72,3 +72,6 @@ export function compareStores(items, overrides = {}) {
 }
 
 export const euro = (x) => x.toLocaleString('nl-BE', { style: 'currency', currency: 'EUR' });
+
+/** Link naar de zoekpagina van de winkel voor dit product ("mager rundsgehakt (5% vet)" → "mager rundsgehakt"). */
+export const searchUrl = (store, name) => STORES[store].search + encodeURIComponent(name.replace(/\s*\(.*\)/, '').trim());

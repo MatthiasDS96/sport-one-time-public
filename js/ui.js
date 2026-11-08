@@ -44,6 +44,7 @@ const PATHS = {
   x: 'M6 6l12 12M18 6 6 18',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.3-4.3',
   play: 'M8 5v14l11-7L8 5Z',
   dumbbell: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12',
 };
