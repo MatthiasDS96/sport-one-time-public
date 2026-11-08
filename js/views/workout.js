@@ -1,8 +1,7 @@
 // Uitvoermodus: stap voor stap door de training, sets loggen, rusttimer en intervaltimer.
-import { h, icon, ring, nl, toast } from '../ui.js';
+import { h, icon, ring, progress } from '../ui.js';
 import * as ts from '../training/training-store.js';
 import { BLOCKS, itemTarget, bandText, previousSets } from '../training/library.js';
-import { BAND_LABELS } from '../training/catalog.js';
 
 const DRAFT_KEY = 'sport-web-draft';
 let run = null;          // lopende training
@@ -60,7 +59,6 @@ function stopTimer() {
 // ---------------------------------------------------------------- scherm
 export function renderWorkout(rerender, date) {
   stopTimer();
-  ts.ensureTraining();
   const day = ts.dayOn(date);
   if (!day) return h('div', { class: 'page' }, h('p', {}, 'Geen training op deze dag.'));
   const w = ts.resolveDay(day);
@@ -82,7 +80,6 @@ export function renderWorkout(rerender, date) {
 }
 
 function shell(w, content, rerender) {
-  const pct = (run.pos / run.steps.length) * 100;
   return h('div', { class: 'page workout' },
     h('div', { class: 'wo-top' },
       h('button', {
@@ -96,7 +93,7 @@ function shell(w, content, rerender) {
       }, icon('x')),
       h('div', { class: 'wo-title' }, h('b', {}, w.title), h('span', { class: 'muted small' }, `Stap ${Math.min(run.pos + 1, run.steps.length)} van ${run.steps.length}`)),
       h('span')),
-    h('div', { class: 'bar-track' }, h('div', { class: 'bar-fill', style: { width: `${pct}%`, background: 'var(--accent)' } })),
+    progress(run.pos / run.steps.length),
     content);
 }
 
@@ -329,5 +326,3 @@ export function renderResult(rerender, date) {
 export function leavingWorkout() {
   stopTimer();
 }
-
-export { BAND_LABELS, nl, toast };

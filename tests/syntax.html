@@ -1,0 +1,7 @@
+<!doctype html><meta charset="utf-8"><pre id="out"></pre>
+<script>
+// Toont de regel van een syntaxfout: tests/syntax.html?f=views/profile
+window.onerror = (msg, src, line, col) => { document.getElementById('out').textContent = `${msg} @ ${src}:${line}:${col}`; };
+const s = document.createElement('script'); s.type = 'module';
+s.src = `../js/${new URLSearchParams(location.search).get('f')}.js`; document.body.append(s);
+</script>

@@ -1,14 +1,16 @@
-import { h, icon, chip, nl, toast, foodTabs } from '../ui.js';
+import { h, icon, chip, nl, toast, foodTabs, back, pageHead, macroTiles, toggleIn } from '../ui.js';
 import * as store from '../store.js';
 import { RECIPES } from '../data/recipes.js';
 import { recipeById, recipeMacros, scaledIngredients, displayAmount } from '../nutrition/planner.js';
 
 export function recipeLink(id, factor = 1, portions = 1) {
-  const q = [];
-  if (factor !== 1) q.push(`f=${factor}`);
-  if (portions !== 1) q.push(`n=${portions}`);
+  const q = [factor !== 1 && `f=${factor}`, portions !== 1 && `n=${portions}`].filter(Boolean);
   return `#/recept/${id}${q.length ? `?${q.join('&')}` : ''}`;
 }
+
+/** Lijnen "recept · aantal porties" voor een meal-prepbeurt (Vandaag en Week). */
+export const prepLines = (items) => items.map((it) => h('a', { class: 'prep-line', href: recipeLink(it.recipe.id, it.batch.factor, it.portions) },
+  h('span', {}, it.recipe.name), h('span', { class: 'pill' }, `${it.portions} porties`), icon('chevronR', 'muted')));
 
 const FILTERS = [
   ['alles', 'Alles', () => true],
@@ -19,53 +21,49 @@ const FILTERS = [
   ['kantoor', 'Meeneembaar', (r) => r.office],
 ];
 let activeFilter = 'alles';
+const excludedIds = () => store.get().food?.excluded || [];
 
 export function renderRecipes(rerender) {
-  const excluded = new Set(store.get().food?.excluded || []);
-  const [, , fn] = FILTERS.find((f) => f[0] === activeFilter);
-  const list = RECIPES.filter(fn);
+  const excluded = excludedIds();
+  const fn = FILTERS.find((f) => f[0] === activeFilter)[2];
   return h('div', { class: 'page' },
-    foodTabs('recepten'),
-    h('div', { class: 'page-head' }, h('div', {}, h('div', { class: 'eyebrow' }, `${RECIPES.length} recepten`), h('h1', {}, 'Recepten'))),
+    foodTabs('#/recepten'),
+    pageHead(`${RECIPES.length} recepten`, 'Recepten'),
     h('div', { class: 'chips scroll' }, FILTERS.map(([key, label]) => h('button', {
       class: `chip-btn ${key === activeFilter ? 'on' : ''}`, onclick: () => { activeFilter = key; rerender(); },
     }, label))),
-    h('div', { class: 'grid' }, list.map((r) => {
+    h('div', { class: 'grid' }, RECIPES.filter(fn).map((r) => {
       const m = recipeMacros(r);
-      return h('a', { class: `recipe-card ${excluded.has(r.id) ? 'off' : ''}`, href: recipeLink(r.id) },
+      const off = excluded.includes(r.id);
+      return h('a', { class: `recipe-card ${off ? 'off' : ''}`, href: recipeLink(r.id) },
         h('div', { class: `recipe-art t-${r.type}` }, icon(r.type === 'snack' ? 'heart' : r.mealprep ? 'box' : r.type === 'ontbijt' ? 'today' : 'flame')),
-        h('div', { class: 'recipe-info' },
+        h('div', {},
           h('div', { class: 'recipe-name' }, r.name),
           h('div', { class: 'meal-meta' }, `${nl(m.kcal)} kcal · ${m.p} g eiwit`, r.minutes ? ` · ${r.totalMinutes || r.minutes} min` : ''),
-          excluded.has(r.id) ? h('div', { class: 'small warn' }, 'Wordt niet voorgesteld') : null));
+          off ? h('div', { class: 'small warn' }, 'Wordt niet voorgesteld') : null));
     })));
 }
 
 export function renderRecipe(rerender, id, query) {
   const r = recipeById(id);
-  if (!r) return h('div', { class: 'page' }, h('p', {}, 'Recept niet gevonden.'));
+  if (!r) return h('div', { class: 'page' }, back(), h('p', {}, 'Recept niet gevonden.'));
   const factor = Number(query.get('f')) || 1;
   let portions = Number(query.get('n')) || 1;
-  const excluded = new Set(store.get().food?.excluded || []);
+  const off = excludedIds().includes(r.id);
 
   const ingWrap = h('div');
-  const macroWrap = h('div', { class: 'macro-tiles' });
   const portionLabel = h('b', {});
-
   const draw = () => {
-    const m = recipeMacros(r, factor);
-    macroWrap.replaceChildren(
-      tile(nl(m.kcal), 'kcal'), tile(`${m.p} g`, 'eiwit'), tile(`${m.c} g`, 'koolh.'), tile(`${m.f} g`, 'vet'));
     portionLabel.textContent = `${portions} ${portions === 1 ? 'portie' : 'porties'}`;
     ingWrap.replaceChildren(h('ul', { class: 'ingredients' }, scaledIngredients(r, factor, portions).map((ing) => {
       const d = displayAmount(ing.id, ing.amount);
       return h('li', {}, h('span', { class: 'qty' }, d.free ? 'naar smaak' : d.qty), h('span', {}, d.name));
     })));
   };
+  const setPortions = (n) => { if (n >= 1 && n <= 8) { portions = n; draw(); } };
   draw();
 
-  const page = h('div', { class: 'page recipe' },
-    h('button', { class: 'back', onclick: () => history.back() }, icon('back'), 'Terug'),
+  return h('div', { class: 'page recipe' }, back(),
     h('div', { class: `recipe-hero t-${r.type}` },
       h('div', { class: 'eyebrow' }, { ontbijt: 'Ontbijt', hoofd: 'Hoofdgerecht', snack: 'Tussendoortje' }[r.type]),
       h('h1', {}, r.name),
@@ -76,32 +74,22 @@ export function renderRecipe(rerender, id, query) {
         r.office ? chip([icon('office', 'tiny'), ' meeneembaar']) : null,
         r.fresh ? chip('vers koken') : null)),
     h('div', { class: 'small muted' }, factor !== 1 ? `Per portie, aangepast aan jouw doel (× ${nl(factor, 2)})` : 'Per portie'),
-    macroWrap,
+    macroTiles(recipeMacros(r, factor)),
     h('div', { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', {}, 'Ingrediënten'),
         h('div', { class: 'stepper' },
-          h('button', { class: 'icon-btn', 'aria-label': 'Minder', onclick: () => { if (portions > 1) { portions--; draw(); } } }, '−'),
+          h('button', { class: 'icon-btn', 'aria-label': 'Minder', onclick: () => setPortions(portions - 1) }, '−'),
           portionLabel,
-          h('button', { class: 'icon-btn', 'aria-label': 'Meer', onclick: () => { if (portions < 8) { portions++; draw(); } } }, '+'))),
+          h('button', { class: 'icon-btn', 'aria-label': 'Meer', onclick: () => setPortions(portions + 1) }, '+'))),
       ingWrap),
-    h('div', { class: 'card' }, h('h2', {}, 'Bereiding'),
-      h('ol', { class: 'steps' }, r.steps.map((s) => h('li', {}, s)))),
+    h('div', { class: 'card' }, h('h2', {}, 'Bereiding'), h('ol', { class: 'steps' }, r.steps.map((s) => h('li', {}, s)))),
     r.tip ? h('div', { class: 'card tip' }, h('b', {}, 'Tip '), r.tip) : null,
     h('button', {
       class: 'btn ghost wide',
       onclick: () => {
-        store.update((s) => {
-          const ex = new Set(s.food?.excluded || []);
-          if (ex.has(r.id)) ex.delete(r.id); else ex.add(r.id);
-          s.food = { ...(s.food || {}), excluded: [...ex] };
-        });
-        toast(excluded.has(r.id) ? 'Wordt terug voorgesteld' : 'Wordt niet meer voorgesteld in nieuwe weekmenu\'s');
+        store.update((s) => { s.food = { ...s.food, excluded: toggleIn(s.food?.excluded || [], r.id) }; });
+        toast(off ? 'Wordt terug voorgesteld' : 'Wordt niet meer voorgesteld in nieuwe weekmenu\'s');
         rerender();
       },
-    }, excluded.has(r.id) ? 'Terug voorstellen in weekmenu' : 'Niet meer voorstellen'));
-  return page;
-}
-
-function tile(value, label) {
-  return h('div', { class: 'tile' }, h('div', { class: 'tile-value' }, value), h('div', { class: 'tile-label' }, label));
+    }, off ? 'Terug voorstellen in weekmenu' : 'Niet meer voorstellen'));
 }

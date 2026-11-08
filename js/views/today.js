@@ -1,81 +1,64 @@
-import { h, icon, ring, bar, nl, sheet, toast } from '../ui.js';
+import { h, icon, ring, bar, nl, sheet, toast, pageHead, choices } from '../ui.js';
 import * as fs from '../nutrition/food-store.js';
-import {
-  SLOTS, SLOT_LABELS, recipeById, entryMacros, dayTotals, prepSessions, officeOption,
-} from '../nutrition/planner.js';
-import { OFFICE_OPTIONS } from '../data/recipes.js';
-import { mondayOf, dayIndex, longDate, addDays } from '../dates.js';
-import { recipeLink } from './recipes.js';
 import * as ts from '../training/training-store.js';
+import { SLOTS, SLOT_LABELS, recipeById, entryMacros, dayTotals, prepSessions, officeOption } from '../nutrition/planner.js';
+import { OFFICE_OPTIONS } from '../data/recipes.js';
 import { ACTIVITIES, workoutName } from '../training/library.js';
+import { mondayOf, dayIndex, longDate, addDays, today } from '../dates.js';
+import { recipeLink, prepLines } from './recipes.js';
 import { dayCard, activitySheet } from './training.js';
 
+/** Rij voor een maaltijd of activiteit: [vinkje] tekst [pijltje of verwijderknop]. target = href, functie of { remove } */
+function row({ check, slot, name, meta, target, done }) {
+  const body = [slot ? h('div', { class: 'meal-slot' }, slot) : null, h('div', { class: 'meal-name' }, name), h('div', { class: 'meal-meta' }, meta)];
+  return h('div', { class: `meal ${done ? 'done' : ''}` }, check,
+    typeof target === 'string' ? h('a', { class: 'meal-body', href: target }, body)
+      : typeof target === 'function' ? h('button', { class: 'meal-body', onclick: target }, body)
+        : h('div', { class: 'meal-body' }, body),
+    target?.remove ? h('button', { class: 'icon-btn', 'aria-label': 'Verwijderen', onclick: target.remove }, icon('x')) : icon('chevronR', 'muted'));
+}
+
 export function renderToday(rerender, dateParam) {
-  const date = dateParam || fs.todayIso();
-  const monday = mondayOf(date);
-  const plan = fs.ensurePlan(monday);
+  const date = dateParam || today();
+  const plan = fs.ensurePlan(mondayOf(date));
   const t = fs.currentTargets();
   const log = fs.dayLog(date);
   const tot = dayTotals(plan, date, log);
-  const isToday = date === fs.todayIso();
   const left = t.kcal - tot.eaten.kcal;
+  const redo = (fn) => () => { fn(); rerender(); };
 
-  const page = h('div', { class: 'page' });
-  page.append(
-    h('div', { class: 'page-head' },
-      h('div', {},
-        h('div', { class: 'eyebrow' }, isToday ? 'Vandaag' : 'Eetdag'),
-        h('h1', {}, longDate(date))),
-      h('div', { class: 'head-nav' },
-        h('a', { class: 'icon-btn', href: `#/vandaag/${addDays(date, -1)}`, 'aria-label': 'Vorige dag' }, icon('chevronL')),
-        h('a', { class: 'icon-btn', href: `#/vandaag/${addDays(date, 1)}`, 'aria-label': 'Volgende dag' }, icon('chevronR')))),
-  );
+  const page = h('div', { class: 'page' },
+    pageHead(date === today() ? 'Vandaag' : 'Dag', longDate(date), `#/vandaag/${addDays(date, -1)}`, `#/vandaag/${addDays(date, 1)}`));
 
   // --- training ---
-  ts.ensureTraining();
   const tday = ts.dayOn(date);
-  page.append(h('h2', { class: 'section first' }, 'Training'));
-  if (tday) {
-    page.append(dayCard(tday, rerender, { big: true }));
-  } else {
-    const nextDay = ts.training().plan.days.find((d) => d.date > date);
-    page.append(h('div', { class: 'card rest-card' },
-      h('div', {}, h('div', { class: 'tc-title' }, 'Rustdag'),
-        h('div', { class: 'meal-meta' }, nextDay ? `Volgende training: ${longDate(nextDay.date)} · ${workoutName(nextDay.workout)}` : 'Herstel is ook training.'))));
-  }
-  const acts = ts.activitiesOn(date);
-  for (const a of acts) {
-    page.append(h('div', { class: 'meal done' },
-      h('div', { class: 'meal-body' }, h('div', { class: 'meal-name' }, ACTIVITIES[a.type].label),
-        h('div', { class: 'meal-meta' }, `${a.minutes} min · ± ${nl(a.kcal)} kcal verbrand${a.replaces ? ' · vervangt de training' : ''}`)),
-      h('button', { class: 'icon-btn', 'aria-label': 'Verwijderen', onclick: () => { ts.removeActivity(a.id); rerender(); } }, icon('x'))));
-  }
-  page.append(h('button', { class: 'btn ghost wide', onclick: () => activitySheet(date, rerender) }, icon('heart'), 'Andere sport gedaan'));
+  const next = ts.training().plan.days.find((d) => d.date > date);
+  page.append(h('h2', { class: 'section first' }, 'Training'),
+    tday ? dayCard(tday, true) : h('div', { class: 'card' }, h('div', { class: 'tc-title' }, 'Rustdag'),
+      h('div', { class: 'meal-meta' }, next ? `Volgende training: ${longDate(next.date)} · ${workoutName(next.workout)}` : 'Herstel is ook training.')),
+    ts.activitiesOn(date).map((a) => row({ name: ACTIVITIES[a.type].label, done: true,
+      meta: `${a.minutes} min · ± ${nl(a.kcal)} kcal verbrand${a.replaces ? ' · vervangt de training' : ''}`,
+      target: { remove: redo(() => ts.removeActivity(a.id)) } })),
+    h('button', { class: 'btn ghost wide', onclick: () => activitySheet(date, rerender) }, icon('heart'), 'Andere sport gedaan'));
 
-  // --- samenvatting ---
-  page.append(h('h2', { class: 'section' }, 'Voeding'));
-  page.append(h('div', { class: 'card summary' },
-    ring(tot.eaten.kcal, t.kcal, {
-      label: nl(tot.eaten.kcal), sub: `van ${nl(t.kcal)} kcal`,
-    }),
-    h('div', { class: 'summary-side' },
-      h('div', { class: 'big-note' },
-        left >= 0 ? h('span', {}, h('b', {}, nl(left)), ' kcal te gaan') : h('span', { class: 'warn' }, h('b', {}, nl(-left)), ' kcal boven je doel')),
-      bar('Eiwit', tot.eaten.p, t.protein, 'var(--accent)'),
-      bar('Koolhydraten', tot.eaten.c, t.carbs, 'var(--blue)'),
-      bar('Vet', tot.eaten.f, t.fat, 'var(--orange)'))));
+  // --- voeding ---
+  page.append(h('h2', { class: 'section' }, 'Voeding'),
+    h('div', { class: 'card summary' },
+      ring(tot.eaten.kcal, t.kcal, { label: nl(tot.eaten.kcal), sub: `van ${nl(t.kcal)} kcal` }),
+      h('div', { class: 'summary-side' },
+        h('div', { class: 'big-note' }, left >= 0 ? h('span', {}, h('b', {}, nl(left)), ' kcal te gaan')
+          : h('span', { class: 'warn' }, h('b', {}, nl(-left)), ' kcal boven je doel')),
+        bar('Eiwit', tot.eaten.p, t.protein, 'var(--accent)'),
+        bar('Koolhydraten', tot.eaten.c, t.carbs, 'var(--blue)'),
+        bar('Vet', tot.eaten.f, t.fat, 'var(--orange)'))));
 
-  // --- meal prep vandaag? ---
   const prep = prepToday(date);
   if (prep) {
     page.append(h('div', { class: 'card prep-card' },
       h('div', { class: 'row-title' }, icon('box', 'accent'), h('b', {}, 'Vandaag meal prep')),
-      h('div', { class: 'muted small' }, prep.note),
-      prep.items.map((it) => h('a', { class: 'prep-line', href: recipeLink(it.recipe.id, it.batch.factor, it.portions) },
-        h('span', {}, it.recipe.name), h('span', { class: 'pill' }, `${it.portions} porties`), icon('chevronR', 'muted')))));
+      h('div', { class: 'muted small' }, prep.note), prepLines(prep.items)));
   }
 
-  // --- maaltijden ---
   page.append(h('h2', { class: 'section' }, 'Maaltijden'));
   const day = plan.days[date] || {};
   for (const slot of SLOTS) {
@@ -85,45 +68,26 @@ export function renderToday(rerender, dateParam) {
     const m = entryMacros(plan, entry, log);
     const check = h('button', {
       class: `check ${eaten ? 'on' : ''}`, 'aria-label': eaten ? 'Niet gegeten' : 'Gegeten',
-      onclick: (e) => {
-        e.preventDefault();
-        if (entry.office && !log.office && !eaten) { chooseOffice(date, rerender); return; }
-        fs.toggleEaten(date, slot);
-        rerender();
-      },
+      onclick: () => (entry.office && !log.office && !eaten ? chooseOffice(date, rerender) : redo(() => fs.toggleEaten(date, slot))()),
     }, icon('check'));
-
     if (entry.office) {
       const opt = officeOption(log.office);
-      page.append(h('div', { class: `meal ${eaten ? 'done' : ''}` }, check,
-        h('button', { class: 'meal-body plain', onclick: () => chooseOffice(date, rerender) },
-          h('div', { class: 'meal-slot' }, icon('office', 'tiny'), ' Middag · kantoor'),
-          h('div', { class: 'meal-name' }, opt ? opt.name : 'Lunch buiten de deur'),
-          h('div', { class: 'meal-meta' }, opt ? `± ${nl(m.kcal)} kcal · ${m.p} g eiwit` : 'Tik om te kiezen wat je at')),
-        icon('chevronR', 'muted')));
-      continue;
+      page.append(row({ check, done: eaten, slot: [icon('office', 'tiny'), ' Middag · kantoor'], name: opt ? opt.name : 'Lunch buiten de deur',
+        meta: opt ? `± ${nl(m.kcal)} kcal · ${m.p} g eiwit` : 'Tik om te kiezen wat je at', target: () => chooseOffice(date, rerender) }));
+    } else {
+      const r = recipeById(entry.recipe);
+      page.append(row({ check, done: eaten, name: r.name, meta: `${nl(m.kcal)} kcal · ${m.p} g eiwit`, target: recipeLink(r.id, entry.factor),
+        slot: [entry.post ? 'Na de training' : SLOT_LABELS[slot], entry.batch ? h('span', { class: 'tag' }, 'meal prep') : null] }));
     }
-    const r = recipeById(entry.recipe);
-    page.append(h('div', { class: `meal ${eaten ? 'done' : ''}` }, check,
-      h('a', { class: 'meal-body', href: recipeLink(r.id, entry.factor) },
-        h('div', { class: 'meal-slot' }, entry.post ? 'Na de training' : SLOT_LABELS[slot], entry.batch ? h('span', { class: 'tag' }, 'meal prep') : null),
-        h('div', { class: 'meal-name' }, r.name),
-        h('div', { class: 'meal-meta' }, `${nl(m.kcal)} kcal · ${m.p} g eiwit`)),
-      icon('chevronR', 'muted')));
   }
 
-  // --- extra ---
   const extras = log.extras || [];
   if (extras.length) {
-    page.append(h('h2', { class: 'section' }, 'Extra gegeten'));
-    extras.forEach((x, i) => page.append(h('div', { class: 'meal done' },
-      h('div', { class: 'meal-body' }, h('div', { class: 'meal-name' }, x.name),
-        h('div', { class: 'meal-meta' }, `${nl(x.kcal)} kcal${x.p ? ` · ${x.p} g eiwit` : ''}`)),
-      h('button', { class: 'icon-btn', 'aria-label': 'Verwijderen', onclick: () => { fs.removeExtra(date, i); rerender(); } }, icon('x')))));
+    page.append(h('h2', { class: 'section' }, 'Extra gegeten'), extras.map((x, i) => row({ name: x.name, done: true,
+      meta: `${nl(x.kcal)} kcal${x.p ? ` · ${x.p} g eiwit` : ''}`, target: { remove: redo(() => fs.removeExtra(date, i)) } })));
   }
-  page.append(h('button', { class: 'btn ghost wide', onclick: () => addExtraSheet(date, rerender) }, icon('plus'), 'Iets anders gegeten'));
-
-  page.append(h('p', { class: 'hint' }, 'Vink een maaltijd af als je ze gegeten hebt. Tik op de naam voor het recept.'));
+  page.append(h('button', { class: 'btn ghost wide', onclick: () => addExtraSheet(date, rerender) }, icon('plus'), 'Iets anders gegeten'),
+    h('p', { class: 'hint' }, 'Vink een maaltijd af als je ze gegeten hebt. Tik op de naam voor het recept.'));
   return page;
 }
 
@@ -131,26 +95,20 @@ export function renderToday(rerender, dateParam) {
 function prepToday(date) {
   const di = dayIndex(date);
   if (di !== 6 && di !== 2) return null;
-  const monday = di === 6 ? addDays(date, 1) : mondayOf(date);
-  const plan = fs.ensurePlan(monday);
-  const when = di === 6 ? 'zondag' : 'woensdag';
-  const session = prepSessions(plan).find((s) => s.when === when);
-  if (!session) return null;
-  return {
+  const plan = fs.ensurePlan(di === 6 ? addDays(date, 1) : mondayOf(date));
+  const session = prepSessions(plan).find((s) => s.when === (di === 6 ? 'zondag' : 'woensdag'));
+  return session && {
     note: di === 6 ? 'Voor maandag tot woensdag. Laat afkoelen en zet in de koelkast.' : 'Voor woensdagavond tot zaterdagmiddag.',
     items: session.items,
   };
 }
 
 function chooseOffice(date, rerender) {
-  const log = fs.dayLog(date);
-  const close = sheet('Wat at je op kantoor?', h('div', { class: 'options' },
-    OFFICE_OPTIONS.map((o) => h('button', {
-      class: `option ${log.office === o.id ? 'on' : ''}`,
-      onclick: () => { fs.setOffice(date, o.id); close(); rerender(); toast('Kantoorlunch genoteerd'); },
-    },
-    h('div', { class: 'option-main' }, h('b', {}, o.name), o.k ? h('span', { class: 'muted' }, `± ${nl(o.k)} kcal · ${o.p} g eiwit`) : null),
-    h('div', { class: 'small muted' }, o.tip)))));
+  const current = fs.dayLog(date).office;
+  const close = sheet('Wat at je op kantoor?', choices(OFFICE_OPTIONS.map((o) => ({
+    title: o.k ? `${o.name} · ± ${nl(o.k)} kcal` : o.name, sub: o.tip, on: current === o.id,
+    onClick: () => { fs.setOffice(date, o.id); close(); rerender(); toast('Kantoorlunch genoteerd'); },
+  }))));
 }
 
 function addExtraSheet(date, rerender) {
@@ -167,10 +125,7 @@ function addExtraSheet(date, rerender) {
     h('button', {
       class: 'btn primary wide',
       onclick: () => {
-        try {
-          fs.addExtra(date, { name: name.value, kcal: kcal.value, p: p.value });
-          close(); rerender();
-        } catch (e) { err.textContent = e.message; }
+        try { fs.addExtra(date, { name: name.value, kcal: kcal.value, p: p.value }); close(); rerender(); } catch (e) { err.textContent = e.message; }
       },
     }, 'Toevoegen')));
 }

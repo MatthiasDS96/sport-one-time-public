@@ -79,10 +79,9 @@ export function ring(value, max, { size = 168, stroke = 14, label = '', sub = ''
 
 /** Horizontale balk (eiwit, koolhydraten, vet). */
 export function bar(name, value, max, color, unit = 'g') {
-  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return h('div', { class: 'bar' },
     h('div', { class: 'bar-head' }, h('span', {}, name), h('span', { class: 'muted' }, h('b', {}, value), ` / ${max} ${unit}`)),
-    h('div', { class: 'bar-track' }, h('div', { class: 'bar-fill', style: { width: `${pct}%`, background: color } })));
+    progress(max > 0 ? value / max : 0, color));
 }
 
 export function chip(text, cls = '') {
@@ -129,8 +128,60 @@ export function dateInput(value = '', attrs = {}) {
 }
 
 /** Tabjes bovenaan het eetgedeelte. */
-export function foodTabs(active) {
-  return h('div', { class: 'segmented top-seg' },
-    h('a', { href: '#/week', class: active === 'week' ? 'on' : '' }, 'Weekmenu'),
-    h('a', { href: '#/recepten', class: active === 'recepten' ? 'on' : '' }, 'Recepten'));
+export const foodTabs = (active) => tabs([['#/week', 'Weekmenu'], ['#/recepten', 'Recepten']], active);
+
+// ---------------------------------------------------------------- bouwstenen voor schermen
+
+export const back = () => h('button', { class: 'back', onclick: () => history.back() }, icon('back'), 'Terug');
+
+/** Paginakop met bovenschrift, titel en optioneel pijltjes (hrefs) voor vorige/volgende. */
+export function pageHead(eyebrow, title, prev = null, next = null) {
+  return h('div', { class: 'page-head' },
+    h('div', {}, h('div', { class: 'eyebrow' }, eyebrow), h('h1', {}, title)),
+    prev ? h('div', { class: 'head-nav' },
+      h('a', { class: 'icon-btn', href: prev, 'aria-label': 'Vorige' }, icon('chevronL')),
+      h('a', { class: 'icon-btn', href: next, 'aria-label': 'Volgende' }, icon('chevronR'))) : null);
 }
+
+export const tile = (value, label) => h('div', { class: 'tile' }, h('div', { class: 'tile-value' }, value), h('div', { class: 'tile-label' }, label));
+export const fact = (label, value) => h('div', { class: 'fact' }, h('span', { class: 'muted' }, label), h('b', {}, value));
+
+/**
+ * Knoppenbalk waarvan één of meer knoppen 'aan' staan.
+ * @param options [[waarde, label], ...]  @param isOn (waarde) → bool  @param onPick (waarde) → void
+ * Tekent zichzelf opnieuw na een keuze (handig voor lokale formulierwaarden). pills = losse bolletjes i.p.v. balk.
+ */
+export function segmented(options, isOn, onPick, pills = false) {
+  const wrap = h('div', { class: pills ? 'quick' : 'segmented' });
+  const draw = () => wrap.replaceChildren(...options.map(([v, label]) => h('button', {
+    type: 'button', class: `${pills ? 'pill-btn' : ''} ${isOn(v) ? 'on' : ''}`, onclick: () => { onPick(v); draw(); },
+  }, label)));
+  draw();
+  return wrap;
+}
+
+/** Tabjes bovenaan een gedeelte: [[href, label], ...] */
+export const tabs = (items, active) => h('div', { class: 'segmented top-seg' },
+  items.map(([href, label]) => h('a', { href, class: href === active ? 'on' : '' }, label)));
+
+/** Rij in een lijstkaart met titel, subtekst en pijltje. */
+export const listRow = (href, title, sub, lead = null, cls = '') => h('a', { class: `ex-row ${cls}`, href },
+  lead, h('div', { class: 'ex-main' }, h('div', { class: 'ex-name' }, title), sub ? h('div', { class: 'meal-meta' }, sub) : null),
+  icon('chevronR', 'muted'));
+
+/** Lijst grote keuzeknoppen: [{ title, sub, on, onClick }] */
+export function choices(items) {
+  return h('div', { class: 'options' }, items.map((c) => h('button', { class: `option ${c.on ? 'on' : ''}`, onclick: c.onClick },
+    h('b', {}, c.title), c.sub ? h('div', { class: 'small muted' }, c.sub) : null)));
+}
+
+/** Nieuwe lijst met `v` erbij of eruit (gesorteerd). */
+export const toggleIn = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v].sort((a, b) => (a < b ? -1 : 1)));
+
+/** Vier tegels: kcal, eiwit, koolhydraten, vet ({ kcal, p, c, f }). */
+export const macroTiles = (m) => h('div', { class: 'macro-tiles' },
+  tile(nl(m.kcal), 'kcal'), tile(`${m.p} g`, 'eiwit'), tile(`${m.c} g`, 'koolh.'), tile(`${m.f} g`, 'vet'));
+
+/** Voortgangsbalk (0–1). */
+export const progress = (fraction, color = 'var(--accent)') => h('div', { class: 'bar-track' },
+  h('div', { class: 'bar-fill', style: { width: `${Math.min(100, Math.max(0, fraction * 100))}%`, background: color } }));

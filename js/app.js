@@ -9,6 +9,7 @@ import { renderProfile, renderWelcome } from './views/profile.js';
 import { renderTrainingWeek, renderTrainingDay } from './views/training.js';
 import { renderExercises, renderExercise } from './views/exercises.js';
 import { renderWorkout, renderResult, leavingWorkout } from './views/workout.js';
+import { ensureTraining } from './training/training-store.js';
 
 const TABS = [
   ['vandaag', 'Vandaag', 'today'],
@@ -38,6 +39,7 @@ export function render() {
   const [route = 'vandaag', arg, arg2] = parts;
   if (!(route === 'training' && arg === 'doe')) leavingWorkout();
   const hasProfile = !!store.get().profile;
+  if (hasProfile) ensureTraining();
   let view;
   try {
     if (!hasProfile) view = renderWelcome(render);

@@ -10,7 +10,6 @@ const EMPTY = () => ({
   plans: {},           // maandag → weekplan
   log: {},             // datum → { eaten: { slot: true }, office: optionId, extras: [{ name, kcal, p }] }
   shopping: {},        // maandag → { id: true } (afgevinkt)
-  favorites: [],
 });
 
 let state = load();

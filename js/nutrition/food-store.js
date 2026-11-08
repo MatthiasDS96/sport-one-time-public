@@ -3,10 +3,9 @@ import * as store from '../store.js';
 import { targets } from './calc.js';
 import { generateWeek, mainRecipeIds, swapMeal, DEFAULT_FOOD_SETTINGS } from './planner.js';
 import { addDays, today } from '../dates.js';
-import { ensureTraining, trainingDatesBetween } from '../training/training-store.js';
+import { trainingDatesBetween } from '../training/training-store.js';
 
 function trainingDates(monday) {
-  ensureTraining();
   return trainingDatesBetween(monday, addDays(monday, 6));
 }
 
@@ -108,8 +107,4 @@ export function replanFromThisWeek(monday) {
     for (const key of Object.keys(s.plans)) if (key >= monday) delete s.plans[key];
   });
   ensurePlan(monday);
-}
-
-export function todayIso() {
-  return today();
 }

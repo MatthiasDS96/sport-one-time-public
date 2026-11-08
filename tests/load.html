@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>Laadtest</title>
+<pre id="out">bezig…</pre>
+<script type="module">
+// Laadt elke module apart en toont importfouten (handig na een refactor).
+const files = ['ui', 'store', 'dates', 'nutrition/planner', 'nutrition/food-store', 'training/library', 'training/training-store',
+  'views/recipes', 'views/training', 'views/exercises', 'views/today', 'views/week', 'views/shopping', 'views/profile', 'views/workout'];
+const out = [];
+for (const f of files) {
+  try { await import(`../js/${f}.js`); out.push(`OK   ${f}`); } catch (e) { out.push(`FAIL ${f}: ${e.message}`); }
+}
+document.getElementById('out').textContent = out.join('\n');
+</script>

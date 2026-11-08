@@ -108,6 +108,11 @@ export function statusOn(date) {
   return date < today() ? 'missed' : 'planned';
 }
 
+/** Training nog te doen (gepland, gemist of overgeslagen)? */
+export const isOpen = (status) => status === 'planned' || status === 'missed' || status === 'skipped';
+/** Telt als gedaan (ook deels of vervangen door een andere sport)? */
+export const isDone = (status) => status === 'done' || status === 'partial' || status === 'substituted';
+
 /**
  * Bewaart een uitgevoerde training.
  * @param r { date, workout, started, ended, rpe, notes, sets: [{ code, block, set, value, targetMax, band, steps }] }
@@ -129,21 +134,13 @@ export function saveSession(r) {
   return evaluate(r.date, t.sessions, t.levels, t.equipment);
 }
 
-export function markDone(date) {
-  const day = dayOn(date);
-  store.update((st) => {
-    st.training.sessions[date] = { workout: day.workout, title: workoutName(day.workout), status: 'COMPLETED',
-      notes: 'Afgevinkt zonder details', sets: [] };
-  });
+/** Training afsluiten zonder sets: afgevinkt of overgeslagen. */
+function closeDay(date, status, notes) {
+  const { workout } = dayOn(date);
+  store.update((st) => { st.training.sessions[date] = { workout, title: workoutName(workout), status, notes, sets: [] }; });
 }
-
-export function skip(date, reason) {
-  const day = dayOn(date);
-  store.update((st) => {
-    st.training.sessions[date] = { workout: day.workout, title: workoutName(day.workout), status: 'SKIPPED',
-      notes: reason || null, sets: [] };
-  });
-}
+export const markDone = (date) => closeDay(date, 'COMPLETED', 'Afgevinkt zonder details');
+export const skip = (date, reason) => closeDay(date, 'SKIPPED', reason || null);
 
 export function undo(date) {
   store.update((st) => {
@@ -201,8 +198,7 @@ export function addActivity({ date, type, intensity, minutes, replace = true }) 
   if (!(min > 0 && min <= 600)) throw new Error('Geef een duur tussen 1 en 600 minuten in.');
   const weight = store.get().profile.weight;
   const kcal = activityKcal(type, intensity, min, weight);
-  const status = statusOn(date);
-  const replaces = replace && (status === 'planned' || status === 'missed' || status === 'skipped') ? date : null;
+  const replaces = replace && isOpen(statusOn(date)) ? date : null;
   store.update((st) => {
     if (replaces) delete st.training.sessions[date];
     st.training.activities.push({ id: Date.now(), date, type, intensity, minutes: min, kcal, replaces });
@@ -226,7 +222,7 @@ export function streak() {
   let n = 0;
   for (const d of past) {
     const s = statusOn(d.date);
-    if (s === 'done' || s === 'partial' || s === 'substituted') n++;
+    if (isDone(s)) n++;
     else if (s === 'planned') continue; // vandaag nog niet gedaan
     else break;
   }

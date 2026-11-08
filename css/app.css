@@ -211,7 +211,6 @@ h3 { margin: 0; font-size: 18px; }
 .option { text-align: left; background: var(--card-2); border: 2px solid transparent; border-radius: 14px; padding: 12px 14px; }
 .option.on { border-color: var(--accent); }
 .option b { color: var(--text); }
-.option-main { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .facts { display: flex; flex-direction: column; }
 .fact { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); font-size: 14px; }
 .fact b { text-align: right; }
@@ -285,7 +284,6 @@ h2.section.first { margin-top: 4px; }
 .status.ok { background: rgba(198, 255, 61, 0.15); color: var(--accent); }
 .status.warn { background: rgba(255, 122, 26, 0.15); color: var(--orange); }
 .status.bad { background: rgba(255, 77, 94, 0.15); color: var(--red); }
-.rest-card .tc-title { margin-top: 0; }
 .done-card { display: flex; gap: 12px; align-items: center; }
 .done-card .icon { width: 28px; height: 28px; }
 
