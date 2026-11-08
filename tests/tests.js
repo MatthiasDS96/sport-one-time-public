@@ -286,6 +286,25 @@ test('alle oefeningen hebben uitleg', () => {
   for (const e of EXERCISES) ok(e.description.length > 20, e.code);
 });
 
+// ================= prijzen =================
+import { PRICES, storeCost, compareStores, packPrice } from '../js/nutrition/prices.js';
+
+test('elk ingrediënt dat je koopt heeft een richtprijs', () => {
+  for (const r of RECIPES) for (const [id] of r.ingredients) ok(PRICES[id] || (FOODS[id].free && FOODS[id].pantry), `geen prijs: ${id}`);
+});
+
+test('kost: volle verpakkingen, eigen prijs, ontbrekend bij Aldi', () => {
+  const c = storeCost([{ id: 'kipfilet', amount: 950 }, { id: 'ei', amount: 7 }], 'delhaize');
+  eq(c.lines.kipfilet, { packs: 2, pack: 500, price: 6.99, cost: 13.98 });
+  eq(c.lines.ei.packs, 1);
+  eq(c.total, 17.97);
+  eq(packPrice('kipfilet', 'aldi'), 5.73);
+  eq(packPrice('kipfilet', 'aldi', { kipfilet: { aldi: 5 } }), 5);
+  eq(storeCost([{ id: 'sriracha', amount: 5 }], 'aldi').missing, ['sriracha']);
+  const rank = compareStores(shoppingList(plan).groups.flatMap((g) => g.items));
+  ok(rank[0].total > 30 && rank[0].total < 150, `weektotaal ${rank[0].total}`);
+});
+
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 document.getElementById('out').textContent =
   `${results.join('\n')}\n\n${failed ? `${failed} MISLUKT` : `ALLE ${results.length} TESTS OK`}`;

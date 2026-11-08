@@ -192,11 +192,16 @@ h3 { margin: 0; font-size: 18px; }
 /* ---------- boodschappen ---------- */
 .progress-card { display: flex; flex-direction: column; gap: 8px; }
 .shop-group h2 { margin-bottom: 4px; }
-.shop-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; border-top: 1px solid var(--border); text-align: left; }
+.shop-item { display: flex; align-items: center; gap: 8px; width: 100%; border-top: 1px solid var(--border); }
+.shop-main { flex: 1; display: flex; align-items: center; gap: 12px; padding: 10px 0; text-align: left; min-width: 0; }
+.shop-price { font-weight: 700; font-size: 14px; white-space: nowrap; padding: 6px 0 6px 8px; }
+.shop-price.own { color: var(--accent); }
+.shop-totals { margin: 12px 0 4px; }
+.shop-totals .tile-value { font-size: 17px; }
 .shop-item .check { width: 26px; height: 26px; }
 .shop-item .check .icon { width: 15px; height: 15px; }
 .shop-name { flex: 1; }
-.shop-qty { color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.shop-qty { display: block; color: var(--muted); font-size: 13px; }
 .shop-item.on .shop-name { text-decoration: line-through; color: var(--muted); }
 
 /* ---------- formulieren ---------- */

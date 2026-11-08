@@ -1,11 +1,11 @@
 // Service worker: bewaart de app op het toestel zodat ze zonder internet werkt.
 // Verhoog VERSION bij elke nieuwe versie, dan haalt de telefoon de nieuwe bestanden op.
-const VERSION = 'sport-v3';
+const VERSION = 'sport-v4';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/store.js', 'js/dates.js',
   'js/data/foods.js', 'js/data/recipes.js',
-  'js/nutrition/calc.js', 'js/nutrition/planner.js', 'js/nutrition/food-store.js',
+  'js/nutrition/calc.js', 'js/nutrition/planner.js', 'js/nutrition/food-store.js', 'js/nutrition/prices.js',
   'js/views/today.js', 'js/views/week.js', 'js/views/recipes.js', 'js/views/shopping.js', 'js/views/profile.js',
   'js/views/training.js', 'js/views/exercises.js', 'js/views/workout.js',
   'js/data/exercises.js', 'js/data/videos.js',
