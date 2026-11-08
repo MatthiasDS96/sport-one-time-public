@@ -305,6 +305,11 @@ test('kost: volle verpakkingen, eigen prijs, ontbrekend bij Aldi', () => {
   ok(rank[0].total > 30 && rank[0].total < 150, `weektotaal ${rank[0].total}`);
 });
 
+test('extra gegeten telt ook koolhydraten en vet', () => {
+  const d = dayTotals(plan, '2026-11-09', { extras: [{ name: 'Pizza', kcal: 850, p: 35, c: 110, f: 28 }] });
+  eq([d.eaten.kcal, d.eaten.p, d.eaten.c, d.eaten.f], [850, 35, 110, 28]);
+});
+
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 document.getElementById('out').textContent =
   `${results.join('\n')}\n\n${failed ? `${failed} MISLUKT` : `ALLE ${results.length} TESTS OK`}`;

@@ -369,3 +369,24 @@ export const OFFICE_OPTIONS = [
   { id: 'kfc', name: 'Korean Fried Chicken met rijst', k: 1000, p: 45, tip: 'Deel een portie of neem 4 stuks; eet die avond lichter.' },
   { id: 'mealprep', name: 'Eigen meal prep meegenomen', k: null, p: null, tip: 'Telt als één portie van je meal prep.' },
 ];
+
+/** "Iets anders gegeten": schattingen per stuk/portie (kcal, eiwit p, koolhydraten c, vet f). */
+export const EXTRA_FOODS = [
+  { name: 'Pizza margherita (hele)', k: 850, p: 35, c: 110, f: 28 },
+  { name: 'Pizza salami (hele)', k: 1050, p: 45, c: 110, f: 45 },
+  { name: 'Pizza 4 kazen (hele)', k: 1100, p: 48, c: 105, f: 52 },
+  { name: 'Frietjes (middel)', k: 620, p: 7, c: 75, f: 32 },
+  { name: 'Mayonaise (portie)', k: 210, p: 0, c: 1, f: 23 },
+  { name: 'Frikandel', k: 230, p: 9, c: 10, f: 17 },
+  { name: 'Hamburger', k: 550, p: 28, c: 42, f: 28 },
+  { name: 'Kebab in brood', k: 750, p: 35, c: 70, f: 35 },
+  { name: 'Spaghetti bolognese (restaurant)', k: 800, p: 35, c: 95, f: 28 },
+  { name: 'Croque monsieur', k: 450, p: 25, c: 35, f: 23 },
+  { name: 'Sushi (8 stuks)', k: 350, p: 14, c: 60, f: 6 },
+  { name: 'Pintje (25 cl)', k: 105, p: 1, c: 9, f: 0 },
+  { name: 'Glas wijn', k: 120, p: 0, c: 4, f: 0 },
+  { name: 'Stuk taart', k: 350, p: 5, c: 45, f: 17 },
+  { name: 'Koffiekoek', k: 300, p: 6, c: 35, f: 15 },
+  { name: 'Zakje chips', k: 240, p: 3, c: 24, f: 15 },
+  { name: 'Chocoladereep', k: 270, p: 4, c: 28, f: 15 },
+];

@@ -1,6 +1,6 @@
 // Service worker: bewaart de app op het toestel zodat ze zonder internet werkt.
 // Verhoog VERSION bij elke nieuwe versie, dan haalt de telefoon de nieuwe bestanden op.
-const VERSION = 'sport-v5';
+const VERSION = 'sport-v6';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/ui.js', 'js/store.js', 'js/dates.js',

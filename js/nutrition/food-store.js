@@ -85,8 +85,8 @@ export function addExtra(date, extra) {
   const kcal = Number(String(extra.kcal).replace(',', '.'));
   if (!extra.name?.trim()) throw new Error('Geef een naam in.');
   if (!(kcal > 0 && kcal < 5000)) throw new Error('Geef een geldig aantal kcal in.');
-  const p = Number(String(extra.p || 0).replace(',', '.')) || 0;
-  withLog(date, (l) => { l.extras = [...(l.extras || []), { name: extra.name.trim(), kcal: Math.round(kcal), p: Math.round(p) }]; });
+  const num = (v) => Math.round(Number(String(v || 0).replace(',', '.')) || 0);
+  withLog(date, (l) => { l.extras = [...(l.extras || []), { name: extra.name.trim(), kcal: Math.round(kcal), p: num(extra.p), c: num(extra.c), f: num(extra.f) }]; });
 }
 
 export function removeExtra(date, index) {

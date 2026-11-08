@@ -366,7 +366,7 @@ export function dayTotals(plan, date, dayLog = {}) {
   }
   for (const x of dayLog.extras || []) {
     eaten.kcal += Number(x.kcal) || 0;
-    eaten.p += Number(x.p) || 0;
+    for (const k of ['p', 'c', 'f']) eaten[k] += Number(x[k]) || 0;
   }
   return { planned: roundMacros(planned), eaten: roundMacros(eaten) };
 }

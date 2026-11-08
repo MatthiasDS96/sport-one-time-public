@@ -1,8 +1,8 @@
-import { h, icon, ring, bar, nl, sheet, toast, pageHead, choices } from '../ui.js';
+import { h, icon, ring, bar, nl, sheet, toast, pageHead, choices, segmented } from '../ui.js';
 import * as fs from '../nutrition/food-store.js';
 import * as ts from '../training/training-store.js';
 import { SLOTS, SLOT_LABELS, recipeById, entryMacros, dayTotals, prepSessions, officeOption } from '../nutrition/planner.js';
-import { OFFICE_OPTIONS } from '../data/recipes.js';
+import { OFFICE_OPTIONS, EXTRA_FOODS } from '../data/recipes.js';
 import { ACTIVITIES, workoutName } from '../training/library.js';
 import { mondayOf, dayIndex, longDate, addDays, today } from '../dates.js';
 import { recipeLink, prepLines } from './recipes.js';
@@ -112,20 +112,35 @@ function chooseOffice(date, rerender) {
 }
 
 function addExtraSheet(date, rerender) {
-  const name = h('input', { type: 'text', placeholder: 'bv. stuk taart, pintje' });
-  const kcal = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'kcal' });
-  const p = h('input', { type: 'text', inputmode: 'decimal', placeholder: 'eiwit (g), mag leeg' });
+  const field = (placeholder) => h('input', { type: 'text', inputmode: 'decimal', placeholder });
+  const name = h('input', { type: 'text', placeholder: 'bv. pizza, pintje' });
+  const f = { kcal: field('kcal'), p: field('g'), c: field('g'), f: field('g') };
   const err = h('div', { class: 'error' });
-  const quick = [['Pintje (25 cl)', 105, 1], ['Glas wijn', 120, 0], ['Stuk taart', 350, 5], ['Koffiekoek', 300, 6], ['Frietjes (klein)', 450, 6]];
+  const v = { food: null, portion: 1 };
+  // gekozen gerecht × portie invullen (blijft daarna met de hand aan te passen)
+  const fill = () => {
+    if (!v.food) return;
+    const x = v.portion;
+    name.value = x === 1 ? v.food.name : `${v.food.name} × ${String(x).replace('.', ',')}`;
+    f.kcal.value = Math.round(v.food.k * x);
+    for (const k of ['p', 'c', 'f']) f[k].value = Math.round(v.food[k] * x);
+  };
   const close = sheet('Iets anders gegeten', h('div', { class: 'form' },
-    h('div', { class: 'quick' }, quick.map(([n, k, pp]) => h('button', {
-      class: 'pill-btn', onclick: () => { name.value = n; kcal.value = k; p.value = pp; },
-    }, n))),
-    h('label', {}, 'Wat', name), h('label', {}, 'Kcal', kcal), h('label', {}, 'Eiwit', p), err,
+    h('div', { class: 'label' }, 'Kies een gerecht (schatting)',
+      segmented(EXTRA_FOODS.map((x) => [x, x.name]), (x) => v.food === x, (x) => { v.food = x; fill(); }, true)),
+    h('div', { class: 'label' }, 'Portie', segmented([[0.5, '½'], [1, '1'], [1.5, '1½'], [2, '2']], (x) => v.portion === x, (x) => { v.portion = x; fill(); })),
+    h('label', {}, 'Wat', name),
+    h('div', { class: 'two' }, h('label', {}, 'Kcal', f.kcal), h('label', {}, 'Eiwit (g)', f.p)),
+    h('div', { class: 'two' }, h('label', {}, 'Koolhydraten (g)', f.c), h('label', {}, 'Vet (g)', f.f)),
+    h('p', { class: 'small muted' }, 'Staat het er niet tussen? Typ zelf een naam en de kcal (op de verpakking of via een zoekopdracht). Eiwit, koolhydraten en vet mogen leeg blijven.'),
+    err,
     h('button', {
       class: 'btn primary wide',
       onclick: () => {
-        try { fs.addExtra(date, { name: name.value, kcal: kcal.value, p: p.value }); close(); rerender(); } catch (e) { err.textContent = e.message; }
+        try {
+          fs.addExtra(date, { name: name.value, kcal: f.kcal.value, p: f.p.value, c: f.c.value, f: f.f.value });
+          close(); rerender();
+        } catch (e) { err.textContent = e.message; }
       },
     }, 'Toevoegen')));
 }
