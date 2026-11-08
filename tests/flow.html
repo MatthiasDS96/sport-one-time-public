@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>Doorlooptest</title>
+<pre id="out">bezig…</pre>
+<iframe id="f" style="width:393px;height:800px" src="../index.html?demo=1#/training/doe/2026-11-09"></iframe>
+<script>
+// Klikt een volledige training door in de uitvoermodus en controleert het resultaat.
+const out = document.getElementById('out');
+const f = document.getElementById('f');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+f.onload = async () => {
+  const doc = f.contentDocument;
+  const log = [];
+  try {
+    for (let i = 0; i < 200; i++) {
+      await sleep(30);
+      const buttons = [...doc.querySelectorAll('button')];
+      const by = (t) => buttons.find((b) => b.textContent.trim() === t);
+      const save = by('OPSLAAN');
+      if (save) { save.click(); break; }
+      const b = by('SET KLAAR') || by('KLAAR') || by('Overslaan') || by('START') || by('Stop en bewaar rondes');
+      if (!b) throw new Error('Geen knop op stap ' + i + ': ' + doc.body.innerText.slice(0, 200));
+      log.push(b.textContent.trim());
+      b.click();
+    }
+    await sleep(100);
+    const text = doc.body.innerText;
+    const okHash = f.contentWindow.location.hash.startsWith('#/training/klaar/');
+    const sets = log.filter((x) => x === 'SET KLAAR').length;
+    out.textContent = (okHash && text.includes('Opgeslagen') ? 'FLOW OK' : 'FLOW MISLUKT') +
+      ` · ${sets} sets gelogd · ${log.length} klikken\n` + text.slice(0, 400);
+  } catch (e) { out.textContent = 'FLOW MISLUKT: ' + e.message; }
+};
+</script>

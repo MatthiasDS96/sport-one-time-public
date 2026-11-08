@@ -1,4 +1,4 @@
-import { h, icon, nl, toast } from '../ui.js';
+import { h, icon, nl, toast, foodTabs } from '../ui.js';
 import * as fs from '../nutrition/food-store.js';
 import { SLOTS, SLOT_LABELS, recipeById, dayTotals, prepSessions, entryMacros } from '../nutrition/planner.js';
 import { mondayOf, addDays, dayName, shortDate, parse } from '../dates.js';
@@ -13,6 +13,7 @@ export function renderWeek(rerender, mondayParam) {
   const thisMonday = mondayOf(todayIso);
 
   const page = h('div', { class: 'page' },
+    foodTabs('week'),
     h('div', { class: 'page-head' },
       h('div', {},
         h('div', { class: 'eyebrow' }, monday === thisMonday ? 'Deze week' : monday > thisMonday ? 'Volgende week' : 'Vorige week'),

@@ -6,6 +6,9 @@ import {
 import { OFFICE_OPTIONS } from '../data/recipes.js';
 import { mondayOf, dayIndex, longDate, addDays } from '../dates.js';
 import { recipeLink } from './recipes.js';
+import * as ts from '../training/training-store.js';
+import { ACTIVITIES, workoutName } from '../training/library.js';
+import { dayCard, activitySheet } from './training.js';
 
 export function renderToday(rerender, dateParam) {
   const date = dateParam || fs.todayIso();
@@ -28,7 +31,29 @@ export function renderToday(rerender, dateParam) {
         h('a', { class: 'icon-btn', href: `#/vandaag/${addDays(date, 1)}`, 'aria-label': 'Volgende dag' }, icon('chevronR')))),
   );
 
+  // --- training ---
+  ts.ensureTraining();
+  const tday = ts.dayOn(date);
+  page.append(h('h2', { class: 'section first' }, 'Training'));
+  if (tday) {
+    page.append(dayCard(tday, rerender, { big: true }));
+  } else {
+    const nextDay = ts.training().plan.days.find((d) => d.date > date);
+    page.append(h('div', { class: 'card rest-card' },
+      h('div', {}, h('div', { class: 'tc-title' }, 'Rustdag'),
+        h('div', { class: 'meal-meta' }, nextDay ? `Volgende training: ${longDate(nextDay.date)} · ${workoutName(nextDay.workout)}` : 'Herstel is ook training.'))));
+  }
+  const acts = ts.activitiesOn(date);
+  for (const a of acts) {
+    page.append(h('div', { class: 'meal done' },
+      h('div', { class: 'meal-body' }, h('div', { class: 'meal-name' }, ACTIVITIES[a.type].label),
+        h('div', { class: 'meal-meta' }, `${a.minutes} min · ± ${nl(a.kcal)} kcal verbrand${a.replaces ? ' · vervangt de training' : ''}`)),
+      h('button', { class: 'icon-btn', 'aria-label': 'Verwijderen', onclick: () => { ts.removeActivity(a.id); rerender(); } }, icon('x'))));
+  }
+  page.append(h('button', { class: 'btn ghost wide', onclick: () => activitySheet(date, rerender) }, icon('heart'), 'Andere sport gedaan'));
+
   // --- samenvatting ---
+  page.append(h('h2', { class: 'section' }, 'Voeding'));
   page.append(h('div', { class: 'card summary' },
     ring(tot.eaten.kcal, t.kcal, {
       label: nl(tot.eaten.kcal), sub: `van ${nl(t.kcal)} kcal`,
@@ -81,7 +106,7 @@ export function renderToday(rerender, dateParam) {
     const r = recipeById(entry.recipe);
     page.append(h('div', { class: `meal ${eaten ? 'done' : ''}` }, check,
       h('a', { class: 'meal-body', href: recipeLink(r.id, entry.factor) },
-        h('div', { class: 'meal-slot' }, SLOT_LABELS[slot], entry.batch ? h('span', { class: 'tag' }, 'meal prep') : null),
+        h('div', { class: 'meal-slot' }, entry.post ? 'Na de training' : SLOT_LABELS[slot], entry.batch ? h('span', { class: 'tag' }, 'meal prep') : null),
         h('div', { class: 'meal-name' }, r.name),
         h('div', { class: 'meal-meta' }, `${nl(m.kcal)} kcal · ${m.p} g eiwit`)),
       icon('chevronR', 'muted')));

@@ -256,3 +256,76 @@ h3 { margin: 0; font-size: 18px; }
   max-width: calc(100vw - 32px);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ---------- tabjes bovenaan ---------- */
+.top-seg { margin: 4px 0 6px; }
+.segmented a { flex: 1; text-align: center; padding: 10px 4px; border-radius: 9px; font-weight: 700; color: var(--muted); font-size: 14px; }
+.segmented a.on { background: var(--accent); color: var(--on-accent); }
+h2.section.first { margin-top: 4px; }
+.pill-btn.on { background: var(--accent); color: var(--on-accent); }
+
+/* ---------- training ---------- */
+.week-strip { display: flex; justify-content: space-between; padding: 12px 10px; }
+.ws-day { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; color: var(--muted); font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.ws-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--muted); text-transform: none; }
+.ws-dot .icon { width: 18px; height: 18px; stroke-width: 3; }
+.ws-day.st-planned .ws-dot { border: 2px solid var(--accent); color: var(--text); }
+.ws-day.st-done .ws-dot, .ws-day.st-partial .ws-dot, .ws-day.st-substituted .ws-dot { background: var(--accent); color: var(--on-accent); }
+.ws-day.st-missed .ws-dot { border: 2px solid var(--red); color: var(--red); }
+.ws-day.st-skipped .ws-dot { border: 2px dashed var(--orange); color: var(--orange); }
+.ws-day.today .ws-name { color: var(--accent); }
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+
+.training-card.is-today { outline: 2px solid var(--accent); }
+.tc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tc-title { font-size: 20px; font-weight: 800; margin: 2px 0; }
+.training-card .btn { margin-bottom: 0; margin-top: 12px; }
+.status { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--card-2); color: var(--muted); white-space: nowrap; }
+.status.ok { background: rgba(198, 255, 61, 0.15); color: var(--accent); }
+.status.warn { background: rgba(255, 122, 26, 0.15); color: var(--orange); }
+.status.bad { background: rgba(255, 77, 94, 0.15); color: var(--red); }
+.rest-card .tc-title { margin-top: 0; }
+.done-card { display: flex; gap: 12px; align-items: center; }
+.done-card .icon { width: 28px; height: 28px; }
+
+.list-card { padding: 4px 16px; }
+.ex-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); }
+.ex-row:first-child { border-top: 0; }
+.ex-row.off { opacity: 0.45; }
+.ex-main { flex: 1; min-width: 0; }
+.ex-name { font-weight: 700; }
+.lvl { width: 28px; height: 28px; border-radius: 50%; background: var(--card-2); color: var(--muted); font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex: none; }
+.lvl.on { background: var(--accent); color: var(--on-accent); }
+.bullets { margin: 0; padding-left: 20px; }
+.bullets li { margin-bottom: 6px; }
+.warn-card { border-left: 4px solid var(--orange); }
+
+/* ---------- uitvoermodus ---------- */
+.workout { display: flex; flex-direction: column; gap: 10px; }
+.wo-top { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; gap: 8px; }
+.wo-title { display: flex; flex-direction: column; align-items: center; }
+.wo-block { text-align: center; margin-top: 14px; }
+.wo-name { display: flex; justify-content: center; align-items: center; gap: 4px; font-size: 26px; font-weight: 800; text-align: center; line-height: 1.2; }
+.wo-target { text-align: center; color: var(--muted); font-size: 15px; }
+.wo-band { align-self: center; }
+.center { text-align: center; }
+.center-box { display: flex; flex-direction: column; align-items: center; margin: 10px 0; }
+.wo-stepper { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 18px; }
+.wo-value { font-size: 84px; font-weight: 800; letter-spacing: -0.04em; min-width: 120px; text-align: center; line-height: 1; }
+.round-btn { width: 64px; height: 64px; border-radius: 50%; background: var(--card); font-size: 32px; font-weight: 700; }
+.round-btn:active { background: var(--card-2); }
+.prev { color: var(--accent); margin-top: 4px; }
+.big-btn { min-height: 58px; font-size: 18px; margin-top: 14px; }
+.wo-simple { margin: 30px 0 10px; font-size: 16px; }
+.timed { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 10px; }
+.timed-clock { display: flex; flex-direction: column; align-items: center; }
+.timed .ring-value { font-size: 56px; }
+.next-up { display: flex; flex-direction: column; gap: 2px; }
+.rpe { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.rpe button { background: var(--card-2); border-radius: 10px; padding: 12px 0; font-weight: 800; }
+.rpe button.on { background: var(--accent); color: var(--on-accent); }
+.done-hero .logo { width: 72px; height: 72px; border-radius: 50%; background: var(--accent); color: var(--on-accent);
+  display: flex; align-items: center; justify-content: center; margin: 20px 0 10px; }
+.done-hero .logo .icon { width: 40px; height: 40px; stroke-width: 3; }

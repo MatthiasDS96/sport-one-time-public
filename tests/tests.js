@@ -194,6 +194,98 @@ test('datums', () => {
   eq(addDays('2026-12-31', 1), '2027-01-01');
 });
 
+// ================= training =================
+import { generatePlan, createPlan, resolve, startMonday, evaluate, applySuggestion, estimatedMinutes, replanFrom } from '../js/training/library.js';
+import { initialLevels, EXERCISES, byCode as exByCode, hasEquipment } from '../js/training/catalog.js';
+
+const EQ = ['BAND', 'DOOR_ANCHOR', 'PUNCHING_BAG', 'BENCH'];
+
+test('schema: 13 weken, 3 dagen, fases en afsluiters zoals desktop', () => {
+  const days = generatePlan('2026-11-09', [0, 2, 4]);
+  eq(days.length, 39);
+  eq(days.slice(0, 3).map((d) => d.workout), ['FULL_A', 'FULL_B', 'FULL_A']);
+  eq(days[0].finisher, { rounds: 4, workSec: 120, restSec: 60 });
+  eq(days[3 * 4].phase, 2);
+  eq(days[3 * 4 + 2].finisher, { rounds: 8, workSec: 30, restSec: 30 }); // fase 2 laatste dag HIIT
+  eq(days[3 * 8 + 2].workout, 'FULL_C');
+  eq(days[36].workout, 'TEST');
+  eq(days[36].phase, 4);
+});
+
+test('schema start: zondag → volgende maandag, geen dagen in het verleden', () => {
+  eq(startMonday('2026-11-08', [0, 2, 4]), '2026-11-09');
+  eq(startMonday('2026-11-11', [0, 2, 4]), '2026-11-09');
+  eq(startMonday('2026-11-14', [0, 2, 4]), '2026-11-16');
+  const p = createPlan('2026-11-11', [0, 2, 4]);
+  eq(p.days[0].date, '2026-11-11');
+});
+
+test('niveaus met eigen materiaal: geen rekstok of tafel', () => {
+  const levels = initialLevels('BEGINNER', EQ);
+  eq(levels.PUSH_H.code, 'INCLINE_PUSHUP_BENCH');
+  eq(levels.PULL_H.code, 'BAND_ROW_SEATED');
+  ok(levels.PULL_H.band === 'LIGHT' && levels.PULL_H.steps === 1, 'elastiek start licht');
+  for (const l of Object.values(levels)) ok(hasEquipment(exByCode(l.code), EQ), l.code);
+  const days = generatePlan('2026-11-09', [0, 2, 4]);
+  for (const d of days) {
+    for (const i of resolve(d, levels, EQ).items) {
+      ok(!i.exercise.equipment.includes('PULLUP_BAR') && !i.exercise.equipment.includes('TABLE'), `: `);
+    }
+  }
+});
+
+test('training omzetten + duur', () => {
+  const levels = initialLevels('BEGINNER', EQ);
+  const w = resolve(generatePlan('2026-11-09', [0, 2, 4])[0], levels, EQ);
+  eq(w.items.filter((i) => i.block === 'MAIN').length, 6);
+  ok(w.items.some((i) => i.block === 'FINISHER' && i.exercise.code === 'BAG_ROUNDS'), 'bokszak-afsluiter');
+  const min = estimatedMinutes(w);
+  ok(min >= 30 && min <= 75, `duur `);
+});
+
+test('progressie: elastiek eerst stap verder, dan zwaarder', () => {
+  let levels = initialLevels('BEGINNER', EQ);
+  const ex = exByCode(levels.PULL_H.code);
+  const sets = [1, 2, 3].map((n) => ({ code: ex.code, block: 'MAIN', set: n, value: ex.max, targetMax: ex.max }));
+  const sessions = { '2026-11-09': { sets } };
+  let r = evaluate('2026-11-09', sessions, levels, EQ);
+  eq(r.suggestions[0].kind, 'BAND_STEP');
+  eq(r.suggestions[0].steps, 2);
+  levels = applySuggestion(levels, r.suggestions[0]);
+  levels.PULL_H.steps = 3;
+  r = evaluate('2026-11-09', sessions, levels, EQ);
+  eq(r.suggestions[0].kind, 'HEAVIER_BAND');
+  eq(r.suggestions[0].band, 'MEDIUM');
+});
+
+test('progressie: volgende oefening en record', () => {
+  const levels = initialLevels('BEGINNER', EQ);
+  const ex = exByCode(levels.PUSH_H.code);
+  const s = (v) => [1, 2, 3].map((n) => ({ code: ex.code, block: 'MAIN', set: n, value: v, targetMax: ex.max }));
+  const sessions = { '2026-11-09': { sets: s(ex.max - 2) }, '2026-11-11': { sets: s(ex.max) } };
+  const r = evaluate('2026-11-11', sessions, levels, EQ);
+  eq(r.suggestions[0].kind, 'NEXT_EXERCISE');
+  eq(r.suggestions[0].to, 'KNEE_PUSHUP');
+  eq(r.records[0].value, ex.max);
+});
+
+test('dagen wijzigen houdt het verleden', () => {
+  const p = { start: '2026-11-09', days: generatePlan('2026-11-09', [0, 2, 4]) };
+  const n = replanFrom(p, '2026-11-16', [1, 3, 5]);
+  eq(n.days.filter((d) => d.date < '2026-11-16').map((d) => d.date), ['2026-11-09', '2026-11-11', '2026-11-13']);
+  eq(n.days.find((d) => d.date >= '2026-11-16').date, '2026-11-17');
+});
+
+test('voeding: herstelsnack op trainingsdagen', () => {
+  const p = generateWeek('2026-11-09', settings, t, { seed: 1, trainingDates: ['2026-11-09', '2026-11-11', '2026-11-13'] });
+  eq(p.days['2026-11-09'].snack2.recipe, 'snack-na-training');
+  ok(p.days['2026-11-10'].snack2.recipe !== 'snack-na-training', 'niet op rustdag');
+});
+
+test('alle oefeningen hebben uitleg', () => {
+  for (const e of EXERCISES) ok(e.description.length > 20, e.code);
+});
+
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 document.getElementById('out').textContent =
   `${results.join('\n')}\n\n${failed ? `${failed} MISLUKT` : `ALLE ${results.length} TESTS OK`}`;

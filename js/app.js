@@ -6,14 +6,20 @@ import { renderWeek } from './views/week.js';
 import { renderRecipes, renderRecipe } from './views/recipes.js';
 import { renderShopping } from './views/shopping.js';
 import { renderProfile, renderWelcome } from './views/profile.js';
+import { renderTrainingWeek, renderTrainingDay } from './views/training.js';
+import { renderExercises, renderExercise } from './views/exercises.js';
+import { renderWorkout, renderResult, leavingWorkout } from './views/workout.js';
 
 const TABS = [
   ['vandaag', 'Vandaag', 'today'],
-  ['week', 'Week', 'week'],
-  ['recepten', 'Recepten', 'book'],
+  ['training', 'Training', 'dumbbell'],
+  ['week', 'Eten', 'book'],
   ['boodschappen', 'Boodschappen', 'cart'],
   ['profiel', 'Profiel', 'user'],
 ];
+
+// routes die onder een tab horen
+const TAB_OF = { recepten: 'week', recept: 'week', oefeningen: 'training', oefening: 'training' };
 
 const main = document.getElementById('main');
 const nav = document.getElementById('tabs');
@@ -29,12 +35,19 @@ let lastHash = null;
 
 export function render() {
   const { parts, query } = parseHash();
-  const [route = 'vandaag', arg] = parts;
+  const [route = 'vandaag', arg, arg2] = parts;
+  if (!(route === 'training' && arg === 'doe')) leavingWorkout();
   const hasProfile = !!store.get().profile;
   let view;
   try {
     if (!hasProfile) view = renderWelcome(render);
     else if (route === 'week') view = renderWeek(render, arg);
+    else if (route === 'training' && arg === 'dag') view = renderTrainingDay(render, arg2);
+    else if (route === 'training' && arg === 'doe') view = renderWorkout(render, arg2);
+    else if (route === 'training' && arg === 'klaar') view = renderResult(render, arg2);
+    else if (route === 'training') view = renderTrainingWeek(render, arg);
+    else if (route === 'oefeningen') view = renderExercises(render);
+    else if (route === 'oefening') view = renderExercise(render, arg);
     else if (route === 'recepten') view = renderRecipes(render);
     else if (route === 'recept') view = renderRecipe(render, arg, query);
     else if (route === 'boodschappen') view = renderShopping(render, arg);
@@ -49,8 +62,8 @@ export function render() {
   window.scrollTo(0, scroll);
   lastHash = location.hash;
 
-  const active = route === 'recept' ? 'recepten' : (TABS.some((t) => t[0] === route) ? route : 'vandaag');
-  nav.hidden = !hasProfile;
+  const active = TAB_OF[route] || (TABS.some((t) => t[0] === route) ? route : 'vandaag');
+  nav.hidden = !hasProfile || (route === 'training' && arg === 'doe');
   nav.replaceChildren(...TABS.map(([key, label, ic]) => h('a', {
     href: `#/${key}`, class: key === active ? 'on' : '',
   }, icon(ic), h('span', {}, label))));

@@ -315,6 +315,13 @@ export const RECIPES = [
 
   // =========================== TUSSENDOORTJES ===========================
   {
+    id: 'snack-na-training', name: 'Skyr met banaan en honing (na de training)', type: 'snack', protein: true,
+    postWorkout: true, minutes: 2,
+    ingredients: [['skyr', 200], ['banaan', 1], ['honing', 5]],
+    steps: ['Snijd de banaan in schijfjes over de skyr en doe er een beetje honing op.'],
+    tip: 'Eiwit + koolhydraten binnen een paar uur na je training helpt herstel en spieropbouw. Een proteïnepudding met een banaan kan ook.',
+  },
+  {
     id: 'snack-pudding', name: 'Proteïnepudding', type: 'snack', protein: true, office: true, minutes: 0,
     ingredients: [['pudding', 1]],
     steps: ['Pot open, lepel erin.'],

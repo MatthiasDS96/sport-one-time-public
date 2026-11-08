@@ -44,6 +44,7 @@ const PATHS = {
   x: 'M6 6l12 12M18 6 6 18',
   download: 'M12 4v11M7 10l5 5 5-5M5 20h14',
   upload: 'M12 20V9M7 14l5-5 5 5M5 4h14',
+  play: 'M8 5v14l11-7L8 5Z',
   dumbbell: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12',
 };
 
@@ -125,4 +126,11 @@ export function dateInput(value = '', attrs = {}) {
     input.value = out;
   });
   return input;
+}
+
+/** Tabjes bovenaan het eetgedeelte. */
+export function foodTabs(active) {
+  return h('div', { class: 'segmented top-seg' },
+    h('a', { href: '#/week', class: active === 'week' ? 'on' : '' }, 'Weekmenu'),
+    h('a', { href: '#/recepten', class: active === 'recepten' ? 'on' : '' }, 'Recepten'));
 }

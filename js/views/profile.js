@@ -4,6 +4,19 @@ import * as fs from '../nutrition/food-store.js';
 import { GOALS } from '../nutrition/calc.js';
 import { PREP_PRESETS } from '../nutrition/planner.js';
 import { fromBelgian, toBelgian, mondayOf, dayShort } from '../dates.js';
+import * as ts from '../training/training-store.js';
+import { EQUIPMENT } from '../training/catalog.js';
+
+/** Keuze van weekdagen (ma–zo). */
+function dayPicker(get, set) {
+  const wrap = h('div', { class: 'segmented' });
+  const draw = () => wrap.replaceChildren(...[0, 1, 2, 3, 4, 5, 6].map((d) => h('button', {
+    type: 'button', class: get().includes(d) ? 'on' : '',
+    onclick: () => { const cur = get(); set(cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort((a, b) => a - b)); draw(); },
+  }, dayShort(d))));
+  draw();
+  return wrap;
+}
 
 /** Formulier voor het profiel; gebruikt in Profiel en bij de eerste start. */
 function profileForm(p, onSave, buttonText) {
@@ -13,7 +26,7 @@ function profileForm(p, onSave, buttonText) {
   const height = h('input', { type: 'text', inputmode: 'numeric', value: p?.height ?? '', placeholder: 'cm' });
   const weight = h('input', { type: 'text', inputmode: 'decimal', value: p?.weight != null ? String(p.weight).replace('.', ',') : '', placeholder: 'kg' });
   let goal = p?.goal || 'recomp';
-  let days = p?.trainingDays ?? 3;
+  let days = [...(store.get().training?.days || ts.DEFAULT_TRAINING.days)];
   const err = h('div', { class: 'error' });
 
   const seg = (options, get, set) => {
@@ -31,7 +44,7 @@ function profileForm(p, onSave, buttonText) {
     h('label', {}, 'Geboortedatum', birth),
     h('div', { class: 'two' }, h('label', {}, 'Lengte (cm)', height), h('label', {}, 'Gewicht (kg)', weight)),
     h('div', { class: 'label' }, 'Doel', seg(Object.entries(GOALS).map(([k, g]) => [k, g.short]), () => goal, (v) => { goal = v; })),
-    h('div', { class: 'label' }, 'Trainingen per week', seg([[2, '2'], [3, '3'], [4, '4'], [5, '5+']], () => days, (v) => { days = v; })),
+    h('div', { class: 'label' }, 'Trainingsdagen', dayPicker(() => days, (v) => { days = v; })),
     err,
     h('button', {
       class: 'btn primary wide',
@@ -42,8 +55,9 @@ function profileForm(p, onSave, buttonText) {
         if (!b) { err.textContent = 'Geef je geboortedatum in als dd/mm/jjjj.'; return; }
         if (!(hgt >= 120 && hgt <= 230)) { err.textContent = 'Geef een lengte tussen 120 en 230 cm in.'; return; }
         if (!(wgt >= 35 && wgt <= 250)) { err.textContent = 'Geef een gewicht tussen 35 en 250 kg in.'; return; }
+        if (!days.length || days.length > 6) { err.textContent = 'Kies 1 tot 6 trainingsdagen.'; return; }
         err.textContent = '';
-        onSave({ name: name.value.trim(), sex, birth: b, height: hgt, weight: Math.round(wgt * 10) / 10, goal, trainingDays: days });
+        onSave({ name: name.value.trim(), sex, birth: b, height: hgt, weight: Math.round(wgt * 10) / 10, goal, trainingDays: days.length }, days);
       },
     }, buttonText));
 }
@@ -52,14 +66,15 @@ export function renderWelcome(rerender) {
   return h('div', { class: 'page welcome' },
     h('div', { class: 'logo' }, icon('dumbbell')),
     h('div', { class: 'eyebrow' }, 'Welkom'),
-    h('h1', {}, 'Je persoonlijke eetschema'),
-    h('p', { class: 'muted' }, 'Vul je gegevens in. De app berekent hoeveel je per dag nodig hebt en maakt een weekmenu met meal prep, recepten en een boodschappenlijst.'),
-    h('div', { class: 'card' }, profileForm(null, (p) => {
-      store.update((s) => { s.profile = p; });
+    h('h1', {}, 'Je persoonlijke coach'),
+    h('p', { class: 'muted' }, 'Vul je gegevens in. De app maakt een trainingsschema van 13 weken voor thuis (elastiek, bokszak, bank) en een weekmenu met meal prep, recepten en een boodschappenlijst.'),
+    h('div', { class: 'card' }, profileForm(null, (p, days) => {
+      store.update((s) => { s.profile = p; s.training = s.training || { ...ts.DEFAULT_TRAINING, days, sessions: {}, activities: [] }; });
+      ts.ensureTraining();
       fs.ensurePlan(mondayOf(fs.todayIso()));
       location.hash = '#/vandaag';
       rerender();
-    }, 'Maak mijn eetschema')),
+    }, 'Maak mijn schema')),
     h('p', { class: 'hint' }, 'Alles blijft op dit toestel. Er wordt niets doorgestuurd.'));
 }
 
@@ -125,12 +140,15 @@ export function renderProfile(rerender) {
 
     h('div', { class: 'card' },
       h('h2', {}, 'Gegevens'),
-      profileForm(s.profile, (p) => {
+      profileForm(s.profile, (p, days) => {
         store.update((st) => { st.profile = p; });
+        ts.updateTrainingSettings({ days });
         fs.replanFromThisWeek(monday);
-        toast('Profiel bewaard, porties herberekend');
+        toast('Profiel bewaard, schema en porties aangepast');
         rerender();
       }, 'Bewaren')),
+
+    trainingSettings(rerender, monday),
 
     h('div', { class: 'card' },
       h('h2', {}, 'Back-up'),
@@ -177,4 +195,39 @@ function tile(value, label) {
 
 function fact(label, value) {
   return h('div', { class: 'fact' }, h('span', { class: 'muted' }, label), h('b', {}, value));
+}
+
+/** Niveau, materiaal en nieuw schema. */
+function trainingSettings(rerender, monday) {
+  const t = ts.ensureTraining();
+  const change = (settings, msg) => {
+    try {
+      ts.updateTrainingSettings(settings);
+      toast(msg);
+      rerender();
+    } catch (e) { alert(e.message); }
+  };
+  const level = h('div', { class: 'segmented' }, [['BEGINNER', 'Beginner'], ['INTERMEDIATE', 'Gevorderd']].map(([k, l]) => h('button', {
+    class: t.level === k ? 'on' : '',
+    onclick: () => { if (t.level !== k && confirm('Alle ketens terugzetten naar het startniveau van ' + l.toLowerCase() + '?')) change({ level: k }, 'Niveau aangepast'); },
+  }, l)));
+  const equipment = h('div', { class: 'quick' }, Object.entries(EQUIPMENT).map(([k, l]) => h('button', {
+    class: `pill-btn ${t.equipment.includes(k) ? 'on' : ''}`,
+    onclick: () => change({ equipment: t.equipment.includes(k) ? t.equipment.filter((x) => x !== k) : [...t.equipment, k] }, 'Materiaal aangepast'),
+  }, l)));
+  return h('div', { class: 'card' },
+    h('h2', {}, 'Training'),
+    h('div', { class: 'label' }, 'Startniveau', level),
+    h('div', { class: 'label' }, 'Materiaal', equipment),
+    h('p', { class: 'small muted' }, `Schema van 13 weken, week 1 start op ${toBelgian(t.plan.start)}. Trainingsdagen wijzig je hierboven bij Gegevens.`),
+    h('button', {
+      class: 'btn ghost wide',
+      onclick: () => {
+        if (!confirm('Een nieuw schema van 13 weken starten vanaf nu? Je gelogde trainingen blijven bewaard.')) return;
+        ts.restartPlan();
+        fs.replanFromThisWeek(monday);
+        toast('Nieuw schema gestart');
+        rerender();
+      },
+    }, 'Nieuw schema starten'));
 }

@@ -1,4 +1,4 @@
-import { h, icon, chip, nl, toast } from '../ui.js';
+import { h, icon, chip, nl, toast, foodTabs } from '../ui.js';
 import * as store from '../store.js';
 import { RECIPES } from '../data/recipes.js';
 import { recipeById, recipeMacros, scaledIngredients, displayAmount } from '../nutrition/planner.js';
@@ -25,6 +25,7 @@ export function renderRecipes(rerender) {
   const [, , fn] = FILTERS.find((f) => f[0] === activeFilter);
   const list = RECIPES.filter(fn);
   return h('div', { class: 'page' },
+    foodTabs('recepten'),
     h('div', { class: 'page-head' }, h('div', {}, h('div', { class: 'eyebrow' }, `${RECIPES.length} recepten`), h('h1', {}, 'Recepten'))),
     h('div', { class: 'chips scroll' }, FILTERS.map(([key, label]) => h('button', {
       class: `chip-btn ${key === activeFilter ? 'on' : ''}`, onclick: () => { activeFilter = key; rerender(); },

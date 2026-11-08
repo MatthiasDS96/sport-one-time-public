@@ -205,7 +205,9 @@ export function generateWeek(monday, settings, t, opts = {}) {
   const days = Object.fromEntries(dates.map((d) => [d, {}]));
 
   // --- tussendoortjes: één eiwitrijk + één ander; op kantoordagen meeneembaar ---
-  const snacks = pool.filter((r) => r.type === 'snack');
+  const snacks = pool.filter((r) => r.type === 'snack' && !r.postWorkout);
+  const post = pool.find((r) => r.postWorkout);
+  const trainingDates = new Set(opts.trainingDates || []);
   let prev1 = null; let prev2 = null;
   dates.forEach((date, day) => {
     const office = isOffice(day);
@@ -215,7 +217,7 @@ export function generateWeek(monday, settings, t, opts = {}) {
     snacks.push(snacks.splice(snacks.indexOf(s1), 1)[0]); // achteraan zetten → afwisseling
     snacks.push(snacks.splice(snacks.indexOf(s2), 1)[0]);
     days[date].snack1 = { recipe: s1.id, factor: 1 };
-    days[date].snack2 = { recipe: s2.id, factor: 1 };
+    days[date].snack2 = post && trainingDates.has(date) ? { recipe: post.id, factor: 1, post: true } : { recipe: s2.id, factor: 1 };
     prev1 = s1.id; prev2 = s2.id;
   });
   const snackKcal = dates.reduce((sum, d) =>
@@ -307,7 +309,7 @@ export function swapMeal(plan, date, slot, settings, t) {
   const s = { ...DEFAULT_FOOD_SETTINGS, ...settings };
   const inPlan = new Set(mainRecipeIds(p));
   const random = rng(`${date}${slot}${Date.now()}`);
-  const pool = shuffle(available(s, date), random).filter((r) => r.type === current.type && r.id !== current.id);
+  const pool = shuffle(available(s, date), random).filter((r) => r.type === current.type && r.id !== current.id && !r.postWorkout);
   const office = s.officeDays.includes(dayIndex(date));
   let next;
   if (entry.batch) {

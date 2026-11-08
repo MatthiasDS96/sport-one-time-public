@@ -3,6 +3,12 @@ import * as store from '../store.js';
 import { targets } from './calc.js';
 import { generateWeek, mainRecipeIds, swapMeal, DEFAULT_FOOD_SETTINGS } from './planner.js';
 import { addDays, today } from '../dates.js';
+import { ensureTraining, trainingDatesBetween } from '../training/training-store.js';
+
+function trainingDates(monday) {
+  ensureTraining();
+  return trainingDatesBetween(monday, addDays(monday, 6));
+}
 
 export function foodSettings() {
   return { ...DEFAULT_FOOD_SETTINGS, ...store.get().food };
@@ -24,7 +30,7 @@ export function ensurePlan(monday) {
   const t = currentTargets();
   if (!t) return null;
   const prev = planFor(addDays(monday, -7));
-  const plan = generateWeek(monday, foodSettings(), t, { avoid: prev ? mainRecipeIds(prev) : [] });
+  const plan = generateWeek(monday, foodSettings(), t, { avoid: prev ? mainRecipeIds(prev) : [], trainingDates: trainingDates(monday) });
   store.update((s) => { s.plans[monday] = plan; });
   return plan;
 }
@@ -35,7 +41,7 @@ export function regeneratePlan(monday) {
   const old = planFor(monday);
   const prev = planFor(addDays(monday, -7));
   const avoid = [...(prev ? mainRecipeIds(prev) : []), ...(old ? mainRecipeIds(old) : [])];
-  const plan = generateWeek(monday, foodSettings(), t, { seed: (old?.seed ?? 0) + 1, avoid });
+  const plan = generateWeek(monday, foodSettings(), t, { seed: (old?.seed ?? 0) + 1, avoid, trainingDates: trainingDates(monday) });
   store.update((s) => {
     s.plans[monday] = plan;
     delete s.shopping[monday];
