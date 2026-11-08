@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><pre id="out"></pre>
+<script type="module">
+import { targets } from '../js/nutrition/calc.js';
+import { generateWeek, dayTotals, recipeById, SLOTS, shoppingList } from '../js/nutrition/planner.js';
+const t = targets({ sex: 'm', birth: '1995-06-15', height: 178, weight: 75, goal: 'recomp', trainingDays: 3 }, '2026-11-08');
+const plan = generateWeek('2026-11-09', {}, t, { seed: 0 });
+let o = JSON.stringify(t) + '\n';
+for (const [d, day] of Object.entries(plan.days)) {
+  const tot = dayTotals(plan, d, {}).planned;
+  o += `${d} ${tot.kcal} kcal ${tot.p}P ${tot.c}C ${tot.f}F | ` + SLOTS.map(s => day[s].office ? 'KANTOOR' : `${day[s].recipe}x${day[s].factor}`).join(', ') + '\n';
+}
+const l = shoppingList(plan);
+o += l.groups.map(g => g.label + ': ' + g.items.map(i => i.qty + ' ' + i.name).join('; ')).join('\n') + '\nVOORRAAD: ' + l.pantry.map(i => i.qty + ' ' + i.name).join('; ');
+document.getElementById('out').textContent = o;
+</script>
