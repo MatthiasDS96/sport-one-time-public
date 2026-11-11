@@ -1,11 +1,12 @@
-// Rust: overzicht van adem- en begeleide oefeningen, en de speler (cirkel of stappen, toon en stem).
+// Rust: overzicht van adem- en begeleide oefeningen, en de speler (cirkel of stappen, toon en muziek).
 import { h, icon, ring, pageHead, tile, listRow, segmented, toast } from '../ui.js';
 import * as store from '../store.js';
 import { today } from '../dates.js';
 import { BREATHS, GUIDED, exerciseById, timeline, totalSeconds, positionAt, calmStats } from '../calm/calm.js';
+import { chime, startMusic, stopMusic } from '../calm/sound.js';
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-const prefs = () => ({ sound: true, voice: true, ...store.get().calmPrefs });
+const prefs = () => ({ sound: true, music: true, ...store.get().calmPrefs });
 const lead = (ic) => h('span', { class: 'lvl' }, icon(ic, 'tiny'));
 const duration = (e) => (e.minutes ? `${e.minutes[0]}–${e.minutes.at(-1)} min` : `± ${Math.round(totalSeconds(timeline(e)) / 60)} min`);
 
@@ -22,68 +23,12 @@ export function renderCalm() {
     statTiles(),
     h('h2', { class: 'section' }, 'Ademhaling'), rows(BREATHS, 'wind'),
     h('h2', { class: 'section' }, 'Begeleid'), rows(GUIDED, 'leaf'),
-    h('p', { class: 'hint' }, 'Tip: na een training of voor het slapengaan helpt 5 minuten al. Zet je geluid aan voor de toon en de stem.'));
+    h('p', { class: 'hint' }, 'Tip: na een training of voor het slapengaan helpt 5 minuten al. Zet je geluid aan voor de toon en de muziek.'));
 }
 
 // ---------------------------------------------------------------- speler
-let ses = null;          // { timer, wake, ... } lopende sessie
-let audio = null;
+let ses = null;          // { timer, wake, save } lopende sessie
 
-function chime(freq) {
-  try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    audio.resume?.();
-    const o = audio.createOscillator();
-    const g = audio.createGain();
-    const t = audio.currentTime;
-    o.type = 'sine'; o.frequency.value = freq;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.12, t + 0.05);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-    o.connect(g); g.connect(audio.destination);
-    o.start(t); o.stop(t + 1.7);
-  } catch { /* geen geluid */ }
-}
-
-// Nederlandse stem; iOS laadt de lijst soms pas later (voiceschanged).
-const synth = window.speechSynthesis;
-let voice = null;
-const pickVoice = () => {
-  const v = synth?.getVoices() || [];
-  const nl = v.filter((x) => /^nl/i.test(x.lang?.replace('_', '-')));
-  voice = nl.find((x) => /BE/i.test(x.lang)) || nl[0] || null;
-};
-pickVoice();
-synth?.addEventListener?.('voiceschanged', pickVoice);
-
-/** Spreekt tekst uit; geeft de uitspraak terug (voor onstart/onerror). */
-function say(text) {
-  if (!synth || !text) return null;
-  if (!voice) pickVoice();
-  const u = new SpeechSynthesisUtterance(text);
-  if (voice) u.voice = voice;
-  u.lang = voice?.lang || 'nl-NL';
-  u.rate = 0.9;
-  // iOS slikt een speak() vlak na cancel() soms in: enkel annuleren als er iets loopt, en dan even wachten
-  if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(() => synth.speak(u), 120); } else { synth.resume?.(); synth.speak(u); }
-  return u;
-}
-
-/** Testknop: spreekt een zin en meldt wat er gebeurt (geen stem, geen geluid, ...). */
-function voiceTest(info) {
-  if (!synth) { info.textContent = 'Deze browser ondersteunt geen gesproken tekst.'; return; }
-  pickVoice();
-  info.textContent = voice ? `Stem: ${voice.name} (${voice.lang})` : 'Geen Nederlandse stem gevonden, standaardstem wordt gebruikt.';
-  const u = say('Hallo, dit is de stem van je rustmoment.');
-  let started = false;
-  u.onstart = () => { started = true; };
-  u.onerror = (e) => { info.textContent += ` · fout: ${e.error}`; };
-  setTimeout(() => {
-    if (!started) info.textContent += ' · Hoor je niets? Zet je iPhone niet op stil en kijk bij Instellingen › Toegankelijkheid › Gesproken materiaal › Stemmen of er een Nederlandse stem gedownload is.';
-  }, 2500);
-}
-
-const SHORT = { in: 'in', top: 'nog wat', out: 'uit', hold: 'vast' };   // gesproken bij ademhaling
 const TONE = { in: 528, top: 660, out: 396, hold: 440 };
 const SCALE = { in: 1, top: 1.1, out: 0.55 };
 
@@ -95,7 +40,8 @@ export function leavingCalm() {
   const s = ses;
   ses = null;
   clearInterval(s.timer);
-  try { window.speechSynthesis?.cancel(); s.wake?.release(); } catch { /* */ }
+  stopMusic();
+  try { s.wake?.release(); } catch { /* */ }
   return s.save();
 }
 
@@ -166,11 +112,9 @@ export function renderCalmSession(rerender, id) {
         setOrb(ph.kind, pos.left);
         orbText.textContent = ph.text;
         if (p.sound && TONE[ph.kind]) chime(TONE[ph.kind]);
-        if (p.voice) say(SHORT[ph.kind]);
       } else {
         stepText.textContent = ph.text;
-        if (p.voice) say(ph.text);
-        else if (p.sound) chime(528);
+        if (p.sound) chime(528);
       }
     }
     if (breath) orbCount.textContent = Math.ceil(pos.left);
@@ -183,24 +127,25 @@ export function renderCalmSession(rerender, id) {
     idx = -1;      // fase opnieuw tonen (en cirkel verder laten lopen)
     tick();
     ses.timer = setInterval(tick, 200);
+    if (p.music) startMusic();
     startBtn.replaceChildren('Pauze');
   };
   const pause = () => {
     elapsed = now(); startedAt = null;
     clearInterval(ses.timer);
     if (breath) freezeOrb();
-    window.speechSynthesis?.cancel();
+    stopMusic();
     startBtn.replaceChildren(icon('play'), 'Verder');
   };
 
-  // zonder await: iOS staat geluid en stem enkel toe binnen de tik zelf
+  // zonder await: iOS staat geluid enkel toe binnen de tik zelf
   function start() {
     const s = ses = { timer: null, wake: null, save: () => save(id, now()) };
     navigator.wakeLock?.request('screen').then((w) => { s.wake = w; }).catch(() => { /* niet ondersteund */ });
     setup.hidden = true; stopBtn.hidden = false;
     if (breath) stepText.textContent = '';
     tabbar(false);
-    chime(396);
+    if (p.sound) chime(396);
     run();
   }
 
@@ -233,16 +178,18 @@ export function renderCalmSession(rerender, id) {
   });
   stopBtn.addEventListener('click', () => stop(false));
 
-  // ---- instellingen vóór de start
-  const voiceInfo = h('div', { class: 'small muted center' });
-  const setPref = (k) => { p[k] = !p[k]; store.update((s) => { s.calmPrefs = { ...prefs(), [k]: p[k] }; }); };
-  setup.append(...[
-    ex.minutes ? h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Duur'),
-      segmented(ex.minutes.map((m) => [m, `${m} min`]), (m) => m === minutes, (m) => { minutes = m; tl = timeline(ex, m); drawIdle(); }, true)) : null,
-    h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Geluid'),
-      segmented([['sound', 'Toon'], ['voice', 'Stem']], (k) => p[k], setPref, true)),
-    h('button', { class: 'btn ghost', onclick: () => voiceTest(voiceInfo) }, 'Stem testen'),
-    voiceInfo].filter(Boolean));
+  // ---- instellingen: duur enkel vóór de start, geluid ook tijdens de sessie
+  const setPref = (k) => {
+    p[k] = !p[k];
+    store.update((s) => { s.calmPrefs = { ...prefs(), [k]: p[k] }; });
+    if (k === 'music' && ses && startedAt) (p.music ? startMusic() : stopMusic());
+  };
+  if (ex.minutes) {
+    setup.append(h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Duur'),
+      segmented(ex.minutes.map((m) => [m, `${m} min`]), (m) => m === minutes, (m) => { minutes = m; tl = timeline(ex, m); drawIdle(); }, true)));
+  }
+  setup.after(h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Geluid'),
+    segmented([['music', 'Muziek'], ['sound', 'Toon']], (k) => p[k], setPref, true)));
   drawIdle();
   return page;
 }
