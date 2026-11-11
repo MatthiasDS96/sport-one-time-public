@@ -343,7 +343,6 @@ h2.section.first { margin-top: 4px; }
 .orb-text { font-size: 19px; font-weight: 700; }
 .orb-count { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; min-height: 48px; }
 .calm-step { font-size: 20px; line-height: 1.45; text-align: center; margin: 12px 8px; min-height: 84px; }
-.calm-setup { display: flex; flex-direction: column; gap: 10px; }
 .calm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .lvl .icon.tiny { color: var(--accent); }
 [hidden] { display: none !important; }

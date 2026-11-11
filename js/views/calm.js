@@ -1,12 +1,10 @@
-// Rust: overzicht van adem- en begeleide oefeningen, en de speler (cirkel of stappen, toon en muziek).
+// Rust: overzicht van adem- en begeleide oefeningen, en de speler (cirkel of stappen met tekst).
 import { h, icon, ring, pageHead, tile, listRow, segmented, toast } from '../ui.js';
 import * as store from '../store.js';
 import { today } from '../dates.js';
 import { BREATHS, GUIDED, exerciseById, timeline, totalSeconds, positionAt, calmStats } from '../calm/calm.js';
-import { chime, startMusic, stopMusic } from '../calm/sound.js';
 
 const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
-const prefs = () => ({ sound: true, music: true, ...store.get().calmPrefs });
 const lead = (ic) => h('span', { class: 'lvl' }, icon(ic, 'tiny'));
 const duration = (e) => (e.minutes ? `${e.minutes[0]}–${e.minutes.at(-1)} min` : `± ${Math.round(totalSeconds(timeline(e)) / 60)} min`);
 
@@ -23,15 +21,12 @@ export function renderCalm() {
     statTiles(),
     h('h2', { class: 'section' }, 'Ademhaling'), rows(BREATHS, 'wind'),
     h('h2', { class: 'section' }, 'Begeleid'), rows(GUIDED, 'leaf'),
-    h('p', { class: 'hint' }, 'Tip: na een training of voor het slapengaan helpt 5 minuten al. Zet je geluid aan voor de toon en de muziek.'));
+    h('p', { class: 'hint' }, 'Tip: na een training of voor het slapengaan helpt 5 minuten al.'));
 }
-
 // ---------------------------------------------------------------- speler
-let ses = null;          // { timer, wake, save } lopende sessie
+let ses = null;   // lopende sessie: { timer, wake, save }
 
-const TONE = { in: 528, top: 660, out: 396, hold: 440 };
-const SCALE = { in: 1, top: 1.1, out: 0.55 };
-
+const SCALE = { in: 1, top: 1.1, out: 0.55 };   // cirkelgrootte per ademfase (hold/rest: blijft)
 const tabbar = (show) => { const n = document.getElementById('tabs'); if (n) n.hidden = !show; };
 
 /** Stopt een lopende sessie en bewaart de minuten; geeft het aantal bewaarde minuten terug. */
@@ -40,8 +35,7 @@ export function leavingCalm() {
   const s = ses;
   ses = null;
   clearInterval(s.timer);
-  stopMusic();
-  try { s.wake?.release(); } catch { /* */ }
+  s.wake?.release().catch(() => {});
   return s.save();
 }
 
@@ -56,12 +50,10 @@ export function renderCalmSession(rerender, id) {
   const ex = exerciseById(id);
   if (!ex) return h('div', { class: 'page' }, h('p', {}, 'Oefening niet gevonden.'));
   const breath = !!ex.pattern;
-  const p = prefs();
-  let minutes = ex.minutes ? ex.minutes[1] : null;
+  let minutes = ex.minutes?.[1];   // gekozen duur (enkel ademhaling en stille meditatie)
   let tl = timeline(ex, minutes);
 
   // ---- elementen
-  const setup = h('div', { class: 'calm-setup' });
   const orb = h('div', { class: 'orb' });
   const orbText = h('div', { class: 'orb-text' });
   const orbCount = h('div', { class: 'orb-count' });
@@ -70,6 +62,9 @@ export function renderCalmSession(rerender, id) {
     : h('div', { class: 'center-box' });
   const stepText = h('p', { class: 'calm-step' });
   const timeLeft = h('div', { class: 'center muted small' });
+  const durationRow = ex.minutes ? h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Duur'),
+    segmented(ex.minutes.map((m) => [m, `${m} min`]), (m) => m === minutes,
+      (m) => { minutes = m; tl = timeline(ex, m); drawIdle(); }, true)) : null;
   const startBtn = h('button', { class: 'btn primary wide big-btn' }, icon('play'), 'START');
   const stopBtn = h('button', { class: 'btn ghost wide', hidden: true }, 'Stoppen');
   const page = h('div', { class: 'page workout calm' },
@@ -77,30 +72,23 @@ export function renderCalmSession(rerender, id) {
       h('button', { class: 'icon-btn', 'aria-label': 'Sluiten', onclick: () => stop(true) }, icon('x')),
       h('div', { class: 'wo-title' }, h('b', {}, ex.name), h('span', { class: 'muted small' }, breath ? 'Ademhaling' : 'Begeleid')),
       h('span')),
-    visual, stepText, timeLeft, setup, startBtn, stopBtn);
+    visual, stepText, timeLeft, durationRow, startBtn, stopBtn);
 
   // ---- toestand
-  let elapsed = 0;       // seconden vóór de huidige start
+  let elapsed = 0;       // seconden vóór de laatste (her)start
   let startedAt = null;  // Date.now() bij (her)start, null = gepauzeerd
-  let idx = -1;
+  let idx = -1;          // huidige fase/stap
   const now = () => elapsed + (startedAt ? (Date.now() - startedAt) / 1000 : 0);
 
-  const setOrb = (kind, sec) => {
-    if (!(kind in SCALE)) return;
-    orb.style.transition = `transform ${sec}s ease-in-out`;
-    orb.style.transform = `scale(${SCALE[kind]})`;
-  };
-  const freezeOrb = () => { orb.style.transform = getComputedStyle(orb).transform; orb.style.transition = 'none'; };
-
-  const drawIdle = () => {
+  function drawIdle() {
     const total = totalSeconds(tl);
-    timeLeft.textContent = `${mmss(total)} min`;
-    if (breath) { orbText.textContent = 'Klaar?'; orbCount.textContent = ''; orb.style.transform = 'scale(0.55)'; }
+    timeLeft.textContent = breath ? `${mmss(total)} min` : `${tl.length} stappen`;
+    if (breath) { orbText.textContent = 'Klaar?'; orbCount.textContent = ''; }
     else visual.replaceChildren(ring(0, 1, { size: 200, stroke: 12, label: mmss(total), sub: 'min', color: 'var(--blue)' }));
     stepText.textContent = ex.why || ex.sub;
-  };
+  }
 
-  const tick = () => {
+  function tick() {
     const t = now();
     const total = totalSeconds(tl);
     const pos = positionAt(tl, t);
@@ -108,44 +96,43 @@ export function renderCalmSession(rerender, id) {
     const ph = tl[pos.i];
     if (pos.i !== idx) {
       idx = pos.i;
-      if (breath) {
-        setOrb(ph.kind, pos.left);
+      if (!breath) stepText.textContent = ph.text;
+      else {
         orbText.textContent = ph.text;
-        if (p.sound && TONE[ph.kind]) chime(TONE[ph.kind]);
-      } else {
-        stepText.textContent = ph.text;
-        if (p.sound) chime(528);
+        if (ph.kind in SCALE) {
+          orb.style.transition = `transform ${pos.left}s ease-in-out`;
+          orb.style.transform = `scale(${SCALE[ph.kind]})`;
+        }
       }
     }
     if (breath) orbCount.textContent = Math.ceil(pos.left);
     else visual.replaceChildren(ring(t, total, { size: 200, stroke: 12, label: mmss(total - t), sub: 'nog', color: 'var(--blue)' }));
     timeLeft.textContent = breath ? `nog ${mmss(total - t)}` : `Stap ${idx + 1} van ${tl.length}`;
-  };
+  }
 
-  const run = () => {
+  function run() {
     startedAt = Date.now();
-    idx = -1;      // fase opnieuw tonen (en cirkel verder laten lopen)
+    idx = -1;   // huidige fase opnieuw instellen, zodat de cirkel verder loopt na een pauze
     tick();
-    ses.timer = setInterval(tick, 200);
-    if (p.music) startMusic();
+    ses.timer = setInterval(tick, 250);
     startBtn.replaceChildren('Pauze');
-  };
-  const pause = () => {
+  }
+
+  function pause() {
     elapsed = now(); startedAt = null;
     clearInterval(ses.timer);
-    if (breath) freezeOrb();
-    stopMusic();
+    orb.style.transform = getComputedStyle(orb).transform;   // cirkel bevriezen
+    orb.style.transition = 'none';
     startBtn.replaceChildren(icon('play'), 'Verder');
-  };
+  }
 
-  // zonder await: iOS staat geluid enkel toe binnen de tik zelf
   function start() {
     const s = ses = { timer: null, wake: null, save: () => save(id, now()) };
-    navigator.wakeLock?.request('screen').then((w) => { s.wake = w; }).catch(() => { /* niet ondersteund */ });
-    setup.hidden = true; stopBtn.hidden = false;
+    navigator.wakeLock?.request('screen').then((w) => { s.wake = w; }).catch(() => {});
+    if (durationRow) durationRow.hidden = true;
+    stopBtn.hidden = false;
     if (breath) stepText.textContent = '';
     tabbar(false);
-    if (p.sound) chime(396);
     run();
   }
 
@@ -161,7 +148,6 @@ export function renderCalmSession(rerender, id) {
     elapsed = totalSeconds(tl); startedAt = null;
     const min = leavingCalm();
     tabbar(true);
-    if (p.sound) { chime(528); setTimeout(() => chime(396), 600); }
     page.replaceChildren(
       h('div', { class: 'center-box done-hero' }, h('div', { class: 'logo' }, icon('check')), h('h1', {}, 'Mooi zo'),
         h('p', { class: 'muted' }, `${ex.name} · ${min} min`)),
@@ -171,25 +157,8 @@ export function renderCalmSession(rerender, id) {
       h('a', { class: 'btn ghost wide', href: '#/vandaag' }, 'Naar vandaag'));
   }
 
-  startBtn.addEventListener('click', () => {
-    if (!ses) start();
-    else if (startedAt) pause();
-    else run();
-  });
+  startBtn.addEventListener('click', () => (!ses ? start() : startedAt ? pause() : run()));
   stopBtn.addEventListener('click', () => stop(false));
-
-  // ---- instellingen: duur enkel vóór de start, geluid ook tijdens de sessie
-  const setPref = (k) => {
-    p[k] = !p[k];
-    store.update((s) => { s.calmPrefs = { ...prefs(), [k]: p[k] }; });
-    if (k === 'music' && ses && startedAt) (p.music ? startMusic() : stopMusic());
-  };
-  if (ex.minutes) {
-    setup.append(h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Duur'),
-      segmented(ex.minutes.map((m) => [m, `${m} min`]), (m) => m === minutes, (m) => { minutes = m; tl = timeline(ex, m); drawIdle(); }, true)));
-  }
-  setup.after(h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Geluid'),
-    segmented([['music', 'Muziek'], ['sound', 'Toon']], (k) => p[k], setPref, true)));
   drawIdle();
   return page;
 }

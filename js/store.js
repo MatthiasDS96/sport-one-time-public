@@ -12,7 +12,6 @@ const EMPTY = () => ({
   shopping: {},        // maandag → { id: true } (afgevinkt)
   prices: {},          // eigen prijzen: foodId → { winkel: euro }
   calm: [],            // rustmomenten [{ date, id, min }]
-  calmPrefs: {},       // { sound, voice }
 });
 
 let state = load();

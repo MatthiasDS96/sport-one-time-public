@@ -29,5 +29,5 @@ blijven op het toestel (localStorage). Back-up via Profiel → Exporteren.
 - `js/training/catalog.js` – oefeningen, ketens, materiaalregels
 - `js/training/library.js` – schema (13 weken), sjablonen, omzetten, progressie, andere sporten (pure logica)
 - `js/training/training-store.js` – koppeling schema ↔ opslag
-- `js/calm/calm.js` – rust: adem- en begeleide oefeningen, tijdlijn, statistiek (pure logica); `sound.js` – toon + muziek (Web Audio)
+- `js/calm/calm.js` – rust: adem- en begeleide oefeningen, tijdlijn, statistiek (pure logica)
 - `js/views/*` – schermen; `js/app.js` – router en tabbalk
