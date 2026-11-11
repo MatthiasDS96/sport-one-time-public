@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>Rusttest</title>
+<pre id="out">bezig…</pre>
+<iframe id="f" style="width:393px;height:800px" src="../index.html?demo=1#/rust/zucht"></iframe>
+<script>
+// BUDGET=120000 bash run-tests.sh calm → dubbele zucht (1 min) afspelen met pauze, controleert fasen en einde.
+const out = document.getElementById('out');
+const f = document.getElementById('f');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+f.onload = async () => {
+  const doc = f.contentDocument;
+  const btn = (t) => [...doc.querySelectorAll('button')].find((b) => b.textContent.trim() === t);
+  const seen = new Set();
+  try {
+    await sleep(100);
+    doc.querySelector('.quick button').click();   // 1 min
+    btn('START').click();
+    for (let i = 0; i < 400 && !doc.body.innerText.includes('Mooi zo'); i++) {
+      await sleep(250);
+      seen.add(doc.querySelector('.orb-text')?.textContent);
+      if (i === 20) { btn('Pauze').click(); await sleep(3000); btn('Verder').click(); }
+    }
+    const done = doc.body.innerText.includes('Mooi zo') && doc.body.innerText.includes('1 min');
+    out.textContent = (done && seen.size >= 4 ? 'CALM OK' : 'CALM MISLUKT') + ` · fasen: ${[...seen].join(' | ')}\n` + doc.body.innerText.slice(0, 200);
+  } catch (e) { out.textContent = 'CALM MISLUKT: ' + e.message; }
+};
+</script>

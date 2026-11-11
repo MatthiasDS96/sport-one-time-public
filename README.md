@@ -13,7 +13,7 @@ blijven op het toestel (localStorage). Back-up via Profiel → Exporteren.
 ## Ontwikkelen (Windows)
 - Op de pc: `start-web.bat` in de hoofdmap van het project (opent de app in een Edge-venster, F5 = vernieuwen)
 - Of handmatig: `jwebserver -p 8123 -d <deze map>` (zit in de JDK) → http://localhost:8123
-- Tests: `bash run-tests.sh` (headless Chrome); volledige training doorklikken: `BUDGET=60000 bash run-tests.sh flow`
+- Tests: `bash run-tests.sh` (headless Chrome); volledige training doorklikken: `BUDGET=60000 bash run-tests.sh flow`, rustsessie: `BUDGET=150000 bash run-tests.sh calm`
 - Oefeningen komen uit de desktopversie: na een wijziging in `src/main/resources/data/exercises.json` → `bash sync-data.sh`
 - Schermafbeeldingen op iPhone-breedte: `bash shots.sh <map> vandaag week "recept/kip-teriyaki?f=0.95"`
   (`DEMO=eaten` = dag met afgevinkte maaltijden)
@@ -29,4 +29,5 @@ blijven op het toestel (localStorage). Back-up via Profiel → Exporteren.
 - `js/training/catalog.js` – oefeningen, ketens, materiaalregels
 - `js/training/library.js` – schema (13 weken), sjablonen, omzetten, progressie, andere sporten (pure logica)
 - `js/training/training-store.js` – koppeling schema ↔ opslag
+- `js/calm/calm.js` – rust: adem- en begeleide oefeningen, tijdlijn, statistiek (pure logica)
 - `js/views/*` – schermen; `js/app.js` – router en tabbalk

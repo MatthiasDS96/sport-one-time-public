@@ -332,3 +332,18 @@ h2.section.first { margin-top: 4px; }
 .done-hero .logo { width: 72px; height: 72px; border-radius: 50%; background: var(--accent); color: var(--on-accent);
   display: flex; align-items: center; justify-content: center; margin: 20px 0 10px; }
 .done-hero .logo .icon { width: 40px; height: 40px; stroke-width: 3; }
+
+/* ---------- rust ---------- */
+.calm .wo-title b { text-align: center; }
+.orb-wrap { position: relative; width: 260px; height: 260px; margin: 24px auto 8px; display: flex; align-items: center; justify-content: center; }
+.orb { position: absolute; inset: 0; border-radius: 50%; transform: scale(0.55);
+  background: radial-gradient(circle at 50% 40%, rgba(198, 255, 61, 0.55), rgba(61, 169, 255, 0.25) 60%, rgba(61, 169, 255, 0.08));
+  box-shadow: 0 0 60px rgba(198, 255, 61, 0.18); }
+.orb-label { position: relative; text-align: center; padding: 0 30px; }
+.orb-text { font-size: 19px; font-weight: 700; }
+.orb-count { font-size: 40px; font-weight: 800; letter-spacing: -0.03em; min-height: 48px; }
+.calm-step { font-size: 20px; line-height: 1.45; text-align: center; margin: 12px 8px; min-height: 84px; }
+.calm-setup { display: flex; flex-direction: column; gap: 10px; }
+.calm-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lvl .icon.tiny { color: var(--accent); }
+[hidden] { display: none !important; }

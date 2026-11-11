@@ -9,11 +9,13 @@ import { renderProfile, renderWelcome } from './views/profile.js';
 import { renderTrainingWeek, renderTrainingDay } from './views/training.js';
 import { renderExercises, renderExercise } from './views/exercises.js';
 import { renderWorkout, renderResult, leavingWorkout } from './views/workout.js';
+import { renderCalm, renderCalmSession, leavingCalm } from './views/calm.js';
 import { ensureTraining } from './training/training-store.js';
 
 const TABS = [
   ['vandaag', 'Vandaag', 'today'],
   ['training', 'Training', 'dumbbell'],
+  ['rust', 'Rust', 'leaf'],
   ['week', 'Eten', 'book'],
   ['boodschappen', 'Boodschappen', 'cart'],
   ['profiel', 'Profiel', 'user'],
@@ -38,6 +40,7 @@ export function render() {
   const { parts, query } = parseHash();
   const [route = 'vandaag', arg, arg2] = parts;
   if (!(route === 'training' && arg === 'doe')) leavingWorkout();
+  leavingCalm();
   const hasProfile = !!store.get().profile;
   if (hasProfile) ensureTraining();
   let view;
@@ -53,6 +56,7 @@ export function render() {
     else if (route === 'recepten') view = renderRecipes(render);
     else if (route === 'recept') view = renderRecipe(render, arg, query);
     else if (route === 'boodschappen') view = renderShopping(render, arg);
+    else if (route === 'rust') view = arg ? renderCalmSession(render, arg) : renderCalm();
     else if (route === 'profiel') view = renderProfile(render);
     else view = renderToday(render, arg);
   } catch (e) {

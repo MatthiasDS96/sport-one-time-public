@@ -47,6 +47,8 @@ const PATHS = {
   search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.3-4.3',
   play: 'M8 5v14l11-7L8 5Z',
   dumbbell: 'M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12',
+  leaf: 'M5 21c0-9 5-15 15-16 0 10-5 15-14 15M5 21l8-8',
+  wind: 'M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h7',
 };
 
 export function icon(name, cls = '') {

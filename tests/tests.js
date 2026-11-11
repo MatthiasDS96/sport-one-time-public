@@ -310,6 +310,25 @@ test('extra gegeten telt ook koolhydraten en vet', () => {
   eq([d.eaten.kcal, d.eaten.p, d.eaten.c, d.eaten.f], [850, 35, 110, 28]);
 });
 
+// ================= rust =================
+import { BREATHS, GUIDED, timeline, totalSeconds, positionAt, calmStats, exerciseById } from '../js/calm/calm.js';
+
+test('rust: tijdlijn vult de gekozen duur', () => {
+  for (const b of BREATHS) for (const m of b.minutes) ok(Math.abs(totalSeconds(timeline(b, m)) - m * 60) <= 10, `${b.id} ${m}`);
+  for (const m of exerciseById('adem').minutes) ok(Math.abs(totalSeconds(timeline(exerciseById('adem'), m)) - m * 60) <= 5, `adem ${m}`);
+  for (const g of GUIDED) ok(timeline(g, g.minutes?.[0]).every((s) => s.text && s.sec > 0), g.id);
+});
+
+test('rust: positie en statistiek', () => {
+  const tl = timeline(exerciseById('kalm'), 1);
+  eq(positionAt(tl, 0), { i: 0, left: 4 });
+  eq(positionAt(tl, 5), { i: 1, left: 5 });
+  eq(positionAt(tl, 999).i, tl.length);
+  const log = [{ date: '2026-11-08', min: 5 }, { date: '2026-11-09', min: 10 }, { date: '2026-11-10', min: 3 }, { date: '2026-11-05', min: 4 }];
+  eq(calmStats(log, '2026-11-11'), { week: 13, streak: 3, total: 22 });
+  eq(calmStats(log, '2026-11-12').streak, 0);
+});
+
 const failed = results.filter((r) => r.startsWith('FAIL')).length;
 document.getElementById('out').textContent =
   `${results.join('\n')}\n\n${failed ? `${failed} MISLUKT` : `ALLE ${results.length} TESTS OK`}`;
