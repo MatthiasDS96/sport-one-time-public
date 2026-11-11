@@ -45,16 +45,42 @@ function chime(freq) {
   } catch { /* geen geluid */ }
 }
 
+// Nederlandse stem; iOS laadt de lijst soms pas later (voiceschanged).
+const synth = window.speechSynthesis;
+let voice = null;
+const pickVoice = () => {
+  const v = synth?.getVoices() || [];
+  const nl = v.filter((x) => /^nl/i.test(x.lang?.replace('_', '-')));
+  voice = nl.find((x) => /BE/i.test(x.lang)) || nl[0] || null;
+};
+pickVoice();
+synth?.addEventListener?.('voiceschanged', pickVoice);
+
+/** Spreekt tekst uit; geeft de uitspraak terug (voor onstart/onerror). */
 function say(text) {
-  const sp = window.speechSynthesis;
-  if (!sp || !text) return;
-  sp.cancel();
+  if (!synth || !text) return null;
+  if (!voice) pickVoice();
   const u = new SpeechSynthesisUtterance(text);
-  const v = sp.getVoices();
-  u.voice = v.find((x) => x.lang === 'nl-BE') || v.find((x) => x.lang?.startsWith('nl')) || null;
-  u.lang = u.voice?.lang || 'nl-BE';
+  if (voice) u.voice = voice;
+  u.lang = voice?.lang || 'nl-NL';
   u.rate = 0.9;
-  sp.speak(u);
+  // iOS slikt een speak() vlak na cancel() soms in: enkel annuleren als er iets loopt, en dan even wachten
+  if (synth.speaking || synth.pending) { synth.cancel(); setTimeout(() => synth.speak(u), 120); } else { synth.resume?.(); synth.speak(u); }
+  return u;
+}
+
+/** Testknop: spreekt een zin en meldt wat er gebeurt (geen stem, geen geluid, ...). */
+function voiceTest(info) {
+  if (!synth) { info.textContent = 'Deze browser ondersteunt geen gesproken tekst.'; return; }
+  pickVoice();
+  info.textContent = voice ? `Stem: ${voice.name} (${voice.lang})` : 'Geen Nederlandse stem gevonden, standaardstem wordt gebruikt.';
+  const u = say('Hallo, dit is de stem van je rustmoment.');
+  let started = false;
+  u.onstart = () => { started = true; };
+  u.onerror = (e) => { info.textContent += ` · fout: ${e.error}`; };
+  setTimeout(() => {
+    if (!started) info.textContent += ' · Hoor je niets? Zet je iPhone niet op stil en kijk bij Instellingen › Toegankelijkheid › Gesproken materiaal › Stemmen of er een Nederlandse stem gedownload is.';
+  }, 2500);
 }
 
 const SHORT = { in: 'in', top: 'nog wat', out: 'uit', hold: 'vast' };   // gesproken bij ademhaling
@@ -208,12 +234,15 @@ export function renderCalmSession(rerender, id) {
   stopBtn.addEventListener('click', () => stop(false));
 
   // ---- instellingen vóór de start
+  const voiceInfo = h('div', { class: 'small muted center' });
   const setPref = (k) => { p[k] = !p[k]; store.update((s) => { s.calmPrefs = { ...prefs(), [k]: p[k] }; }); };
   setup.append(...[
     ex.minutes ? h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Duur'),
       segmented(ex.minutes.map((m) => [m, `${m} min`]), (m) => m === minutes, (m) => { minutes = m; tl = timeline(ex, m); drawIdle(); }, true)) : null,
     h('div', { class: 'calm-row' }, h('span', { class: 'muted small' }, 'Geluid'),
-      segmented([['sound', 'Toon'], ['voice', 'Stem']], (k) => p[k], setPref, true))].filter(Boolean));
+      segmented([['sound', 'Toon'], ['voice', 'Stem']], (k) => p[k], setPref, true)),
+    h('button', { class: 'btn ghost', onclick: () => voiceTest(voiceInfo) }, 'Stem testen'),
+    voiceInfo].filter(Boolean));
   drawIdle();
   return page;
 }
